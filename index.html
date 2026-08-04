@@ -8,6 +8,12 @@
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   
   <style>
+    /* 1. 「けいふぉんと」の読み込み設定 */
+    @font-face {
+      font-family: 'KeiFont';
+      src: url('keifont.ttf') format('truetype');
+    }
+
     :root {
       --scratch-orange: #FFAB19;
       --scratch-blue: #4D97FF;
@@ -15,10 +21,11 @@
       --card-bg: #FFFFFF;
       --text-color: #2D3748;
       --danger-color: #FF6565;
+      --gray-btn: #A0AEC0;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'KeiFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-color);
       display: flex;
@@ -27,7 +34,7 @@
       min-height: 100vh;
       margin: 0;
       padding: 20px;
-      user-select: none; /* テキスト選択を防止 */
+      user-select: none; /* テキスト選択を基本禁止 */
     }
 
     .container {
@@ -38,15 +45,27 @@
       max-width: 480px;
       padding: 32px;
       box-sizing: border-box;
+      text-align: center;
     }
 
-    h1, h2 { text-align: center; margin-top: 0; }
+    /* アイコン画像 */
+    .app-icon {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    h1, h2 { margin-top: 0; }
     .step-panel { display: none; }
     .step-panel.active { display: block; }
 
     input[type="text"], input[type="file"] {
       width: 100%; padding: 12px 16px; border: 2px solid #E2E8F0;
       border-radius: 8px; font-size: 16px; box-sizing: border-box; margin-bottom: 16px;
+      font-family: inherit;
     }
     input[type="text"]:focus { border-color: var(--scratch-blue); outline: none; }
 
@@ -54,18 +73,38 @@
       width: 100%; background-color: var(--scratch-blue); color: white;
       border: none; padding: 14px; border-radius: 8px; font-size: 16px;
       font-weight: bold; cursor: pointer; transition: background 0.2s;
+      font-family: inherit; margin-bottom: 8px;
     }
     button:hover { background-color: #3B82F6; }
 
+    .btn-cancel {
+      background-color: var(--gray-btn);
+    }
+    .btn-cancel:hover {
+      background-color: #718096;
+    }
+
+    /* コード表示コンテナ */
+    .code-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 16px 0;
+    }
     .code-box {
-      background: #EDF2F7; padding: 16px; border-radius: 8px; font-size: 20px;
+      flex: 1;
+      background: #EDF2F7; padding: 12px; border-radius: 8px; font-size: 20px;
       font-weight: bold; letter-spacing: 2px; text-align: center;
-      user-select: all; margin: 16px 0; border: 2px dashed #CBD5E0;
+      user-select: all; border: 2px dashed #CBD5E0;
+    }
+    .btn-copy {
+      width: auto; padding: 12px 16px; margin-bottom: 0;
     }
 
     .cf-box {
       border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px;
-      text-align: center; background: #FAF5FF;
+      text-align: center; background: #FAF5FF; margin-bottom: 16px;
     }
 
     .spinner {
@@ -79,11 +118,11 @@
       color: white; text-align: center; border-radius: 12px; padding: 24px; margin-bottom: 24px;
     }
     .msg-number { font-size: 64px; font-weight: 800; line-height: 1; margin: 8px 0; }
-    .settings-group { border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 16px; }
+    .settings-group { border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 16px; text-align: left; }
     .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
 
-    /* ★カスタム右クリックメニューのスタイル */
+    /* 動的右クリックメニュー */
     #custom-context-menu {
       display: none;
       position: absolute;
@@ -94,6 +133,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       padding: 8px 0;
       min-width: 160px;
+      text-align: left;
     }
     #custom-context-menu div {
       padding: 8px 16px;
@@ -109,54 +149,66 @@
 </head>
 <body>
 
-  <!-- オリジナル右クリックメニュー -->
-  <div id="custom-context-menu">
-    <div onclick="location.reload()">🔄 ページを再読み込み</div>
-    <div onclick="alert('セキュリティ保護のため要素の検査は無効化されています。')">🛡️ セキュリティ情報</div>
-  </div>
+  <!-- カスタム右クリックメニュー -->
+  <div id="custom-context-menu"></div>
 
   <div class="container">
-    <!-- Step 1: ユーザー名入力 -->
+    <!-- アイコン画像表示 -->
+    <img src="1000006736-500x500.jpg" alt="App Icon" class="app-icon" onerror="this.style.display='none'">
+
+    <!-- Step 1: ホーム画面 (/Home) -->
     <div id="step-1" class="step-panel active">
       <h1>Scratch Notification</h1>
-      <p style="text-align:center; color:#718096;">Scratchユーザー名を入力してください</p>
-      <input type="text" id="username-input" placeholder="例: griffpatch" />
+      <p style="color:#718096;">Scratchユーザー名を入力してください</p>
+      <input 
+        type="text" 
+        id="username-input" 
+        placeholder="例: Hiromu0623" 
+        maxlength="20"
+        autocomplete="off"
+      />
       <button onclick="startVerification()">次へ</button>
       <div id="err-step1" class="error-text"></div>
     </div>
 
-    <!-- Step 2: セキュリティ確認 (Cloudflare Turnstile) -->
+    <!-- Step 2: セキュリティ確認 (/Security) -->
     <div id="step-2" class="step-panel">
       <h2>セキュリティ検証</h2>
-      <p style="text-align:center; font-size:14px; color:#4A5568;">チェックボックスを操作してください</p>
+      <p style="font-size:14px; color:#4A5568;">チェックボックスを操作してください</p>
       
       <div style="display: flex; justify-content: center; margin: 20px 0;">
-        <!-- ★ここに発行したSite Keyを貼り付け -->
-       <div class="cf-turnstile" data-sitekey="0x4AAAAAAEFtAED2UAulk94o" data-callback="onTurnstileSuccess"></div>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAEFtAED2UAulk94o" data-callback="onTurnstileSuccess"></div>
       </div>
+      <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
       <div id="err-step2" class="error-text"></div>
     </div>
 
-    <!-- Step 3: コード投稿による本人確認 -->
+    <!-- Step 3: コード投稿確認 (/Verify/<code_raw>) -->
     <div id="step-3" class="step-panel">
       <h2>アカウント所有権の確認</h2>
       <p style="font-size:14px; color:#4A5568; line-height:1.5;">
         以下のコードをコピーし、指定のScratchプロジェクトのコメント欄に投稿してください。
       </p>
-      <div class="code-box" id="auth-code-display">------</div>
-      
-      <p style="text-align:center; font-size:13px;">
-        投稿先: <a id="project-link" href="https://scratch.mit.edu/projects/1366392592/" target="_blank">1366392592 プロジェクト</a>
-      </p>
 
-      <div class="cf-box" style="margin-top:16px;">
-        <div class="spinner"></div>
-        <p style="margin:0; font-size:13px; color:#4A5568;">コメントの投稿を監視中...</p>
+      <div class="code-container">
+        <div class="code-box" id="auth-code-display">------</div>
+        <button class="btn-copy" onclick="copyAuthCode()">📋 コピー</button>
       </div>
+      
+      <button onclick="openScratchProject()" style="background-color: var(--scratch-orange); margin-bottom: 16px;">
+        ここをクリックしてコードを送信してください。
+      </button>
+
+      <div class="cf-box">
+        <div class="spinner"></div>
+        <p style="margin:0; font-size:13px; color:#4A5568;">コードの送信を待機しています...</p>
+      </div>
+
+      <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
       <div id="err-step3" class="error-text"></div>
     </div>
 
-    <!-- Step 4: ダッシュボード＆設定 -->
+    <!-- Step 4: 通知ダッシュボード (/NotifyCount) -->
     <div id="step-4" class="step-panel">
       <h2 id="welcome-msg">ようこそ!</h2>
       <div class="msg-count-card">
@@ -166,10 +218,10 @@
       </div>
 
       <div class="settings-group">
-        <h3>通知設定</h3>
+        <h3 style="margin-top:0;">通知設定</h3>
         <div class="setting-item">
           <span>通知音を鳴らす</span>
-          <input type="checkbox" id="audio-toggle" style="width:20px; height:20px;">
+          <input type="checkbox" id="audio-toggle" style="width:20px; height:20px;" checked>
         </div>
 
         <div style="margin-top: 12px;">
@@ -187,112 +239,176 @@
   <script>
     const PROJECT_ID = "1366392592";
     const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+    const BASE_PATH = "/Scratch-Notify-Checker";
 
     let targetUsername = "";
     let authCode = "";
+    let rawAuthCode = "";
     let checkInterval = null;
     let currentMessageCount = null;
+    let isWaitingForComment = false;
 
     /* ========================================================
-       🔒 セキュリティ機能 (F12禁止 & 開かれたらリロード & 右クリック変更)
+       🌐 ルーティング（URL変更）と自動ログイン
        ======================================================== */
-    
-    // 1. ショートカットキーのブロック (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U など)
-    window.addEventListener("keydown", function (e) {
-      if (
-        e.keyCode === 123 || // F12
-        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
-        (e.ctrlKey && e.keyCode === 85) // Ctrl+U (ソース表示)
-      ) {
-        e.preventDefault();
-        alert("セキュリティ上の理由により、開発者ツールの起動は制限されています。");
-        location.reload(); // 警告後にリロード
+    function updateUrl(path) {
+      const fullPath = BASE_PATH + path;
+      history.pushState(null, "", fullPath);
+    }
+
+    // 初期起動時の状態チェック（自動ログイン含む）
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedUser = localStorage.getItem("scratch_user");
+      if (savedUser) {
+        targetUsername = savedUser;
+        initDashboard();
+      } else {
+        updateUrl("/Home");
       }
     });
 
-    // 2. デベロッパーツールが開かれたかの検知 (ウィンドウサイズの差分・Debugger監視)
+    /* ========================================================
+       🔒 1. 入力制限 (英数字・ハイフン・アンダースコアのみ)
+       ======================================================== */
+    const usernameInput = document.getElementById("username-input");
+    usernameInput.addEventListener("input", function () {
+      this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
+    });
+
+    /* ================================================= realm
+       🔒 2. F12対策 & 動的右クリックメニュー
+       ======================================================== */
+    window.addEventListener("keydown", function (e) {
+      if (
+        e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || 
+        (e.ctrlKey && e.keyCode === 85)
+      ) {
+        e.preventDefault();
+        alert("セキュリティ上の理由により制限されています。");
+        location.reload();
+      }
+    });
+
     function detectDevTools() {
       const threshold = 160;
-      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-      
-      if (widthThreshold || heightThreshold) {
-        alert("開発者ツールが検出されました。ページを再読み込みします。");
+      if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+        alert("開発者ツールが検出されました。再読み込みします。");
         location.reload();
       }
     }
     window.addEventListener("resize", detectDevTools);
     setInterval(detectDevTools, 1000);
 
-    // 3. 右クリックメニューの変更
+    // テキスト選択状況に応じてメニューを切替
     const contextMenu = document.getElementById("custom-context-menu");
-    
     document.addEventListener("contextmenu", function (e) {
-      e.preventDefault(); // デフォルトの右クリックメニューを無効化
+      e.preventDefault();
+      const selectedText = window.getSelection().toString();
       
-      // カスタムメニューの位置を設定して表示
+      let menuHtml = "";
+      if (selectedText.length > 0) {
+        menuHtml += `<div onclick="document.execCommand('copy')">📋 コピー</div>`;
+      }
+      menuHtml += `
+        <div onclick="document.execCommand('selectAll')">🟦 すべてを選択</div>
+        <div onclick="location.reload()">🔄 再読み込み</div>
+        <div onclick="history.forward()">➔ 進む</div>
+        <div onclick="history.back()">⬅️ 戻る</div>
+      `;
+      
+      contextMenu.innerHTML = menuHtml;
       contextMenu.style.left = `${e.pageX}px`;
       contextMenu.style.top = `${e.pageY}px`;
       contextMenu.style.display = "block";
     });
 
-    // 画面のどこかをクリックしたらカスタムメニューを消す
     document.addEventListener("click", function () {
       contextMenu.style.display = "none";
     });
 
+    /* ========================================================
+       ⚠️ 3. 離脱防止アラート (コメント待機中のみ)
+       ======================================================== */
+    window.addEventListener("beforeunload", function (e) {
+      if (isWaitingForComment) {
+        e.preventDefault();
+        e.returnValue = "コードの送信待機中です。本当にページを離れますか？";
+      }
+    });
 
     /* ========================================================
-       📱 アプリケーションメイン処理
+       📱 4. メインアプリケーション処理
        ======================================================== */
-
     function generateCode() {
-      return "VERIFY-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      rawAuthCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      authCode = "VERIFY-" + rawAuthCode;
+      return authCode;
     }
 
     function startVerification() {
-      const input = document.getElementById("username-input").value.trim();
+      const input = usernameInput.value.trim();
       if (!input) {
         showError("err-step1", "ユーザー名を入力してください。");
         return;
       }
+      if (input.length < 3 || input.length > 20) {
+        showError("err-step1", "Scratchのユーザー名は3〜20文字です。");
+        return;
+      }
+
+      showError("err-step1", "");
       targetUsername = input;
       showStep(2);
+      updateUrl("/Security");
     }
 
-    // Cloudflare Turnstile成功時に呼ばれる
     function onTurnstileSuccess(token) {
-      authCode = generateCode();
+      generateCode();
       document.getElementById("auth-code-display").textContent = authCode;
       
       setTimeout(() => {
         showStep(3);
+        updateUrl(`/Verify/${rawAuthCode}`);
         startCommentPolling();
       }, 1000);
     }
 
+    function copyAuthCode() {
+      navigator.clipboard.writeText(authCode).then(() => {
+        alert("コードをコピーしました！ Scratchのコメント欄に貼り付けてください。");
+      });
+    }
+
+    function openScratchProject() {
+      window.open(`https://scratch.mit.edu/projects/${PROJECT_ID}/`, "_blank");
+    }
+
     function startCommentPolling() {
       if (checkInterval) clearInterval(checkInterval);
+      isWaitingForComment = true;
 
       checkInterval = setInterval(async () => {
         try {
           const apiUrl = `https://api.scratch.mit.edu/projects/${PROJECT_ID}/comments?limit=20&offset=0`;
           const res = await fetch(CORS_PROXY + encodeURIComponent(apiUrl));
-          
           if (!res.ok) return;
+          
           const comments = await res.json();
-
           const matchedComment = comments.find(c => c.content && c.content.includes(authCode));
 
           if (matchedComment) {
             clearInterval(checkInterval);
+            isWaitingForComment = false;
             const commenter = matchedComment.author.username;
 
             if (commenter.toLowerCase() === targetUsername.toLowerCase()) {
+              // ログインデータを保存
+              localStorage.setItem("scratch_user", targetUsername);
               initDashboard();
             } else {
-              alert(`入力されたユーザー名 (${targetUsername}) と投稿者 (${commenter}) が一致しません。最初からやり直してください。`);
-              logout();
+              alert(`入力されたユーザー名 (${targetUsername}) と投稿者 (${commenter}) が一致しません。`);
+              cancelVerification();
             }
           }
         } catch (err) {
@@ -301,8 +417,19 @@
       }, 4000);
     }
 
+    function cancelVerification() {
+      if (checkInterval) clearInterval(checkInterval);
+      isWaitingForComment = false;
+      targetUsername = "";
+      usernameInput.value = "";
+      showStep(1);
+      updateUrl("/Home");
+    }
+
     function initDashboard() {
+      isWaitingForComment = false;
       showStep(4);
+      updateUrl("/NotifyCount");
       document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
       updateMessageCount();
       setInterval(updateMessageCount, 10000);
@@ -330,6 +457,7 @@
     }
 
     function playNotificationSound() {
+      if (!document.getElementById("audio-toggle").checked) return;
       const fileInput = document.getElementById("sound-file");
       
       if (fileInput.files && fileInput.files[0]) {
@@ -369,10 +497,12 @@
 
     function logout() {
       if (checkInterval) clearInterval(checkInterval);
+      localStorage.removeItem("scratch_user"); // 保存データを削除
       currentMessageCount = null;
       targetUsername = "";
-      document.getElementById("username-input").value = "";
+      usernameInput.value = "";
       showStep(1);
+      updateUrl("/Home");
     }
   </script>
 </body>
