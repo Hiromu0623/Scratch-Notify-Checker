@@ -8,7 +8,7 @@
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   
   <style>
-    /* 1. 「けいふぉんと」の読み込み設定 */
+    /* けいふぉんとの読み込み設定 */
     @font-face {
       font-family: 'KeiFont';
       src: url('keifont.ttf') format('truetype');
@@ -156,7 +156,7 @@
     <!-- アイコン画像表示 -->
     <img src="1000006736-500x500.jpg" alt="App Icon" class="app-icon" onerror="this.style.display='none'">
 
-    <!-- Step 1: ホーム画面 (/Home) -->
+    <!-- Step 1: ホーム画面 -->
     <div id="step-1" class="step-panel active">
       <h1>Scratch Notification</h1>
       <p style="color:#718096;">Scratchユーザー名を入力してください</p>
@@ -171,7 +171,7 @@
       <div id="err-step1" class="error-text"></div>
     </div>
 
-    <!-- Step 2: セキュリティ確認 (/Security) -->
+    <!-- Step 2: セキュリティ確認 -->
     <div id="step-2" class="step-panel">
       <h2>セキュリティ検証</h2>
       <p style="font-size:14px; color:#4A5568;">チェックボックスを操作してください</p>
@@ -183,7 +183,7 @@
       <div id="err-step2" class="error-text"></div>
     </div>
 
-    <!-- Step 3: コード投稿確認 (/Verify/<code_raw>) -->
+    <!-- Step 3: コード投稿確認 -->
     <div id="step-3" class="step-panel">
       <h2>アカウント所有権の確認</h2>
       <p style="font-size:14px; color:#4A5568; line-height:1.5;">
@@ -208,7 +208,7 @@
       <div id="err-step3" class="error-text"></div>
     </div>
 
-    <!-- Step 4: 通知ダッシュボード (/NotifyCount) -->
+    <!-- Step 4: 通知ダッシュボード -->
     <div id="step-4" class="step-panel">
       <h2 id="welcome-msg">ようこそ!</h2>
       <div class="msg-count-card">
@@ -239,31 +239,19 @@
   <script>
     const PROJECT_ID = "1366392592";
     const CORS_PROXY = "https://api.allorigins.win/raw?url=";
-    const BASE_PATH = "/Scratch-Notify-Checker";
 
     let targetUsername = "";
     let authCode = "";
-    let rawAuthCode = "";
     let checkInterval = null;
     let currentMessageCount = null;
     let isWaitingForComment = false;
 
-    /* ========================================================
-       🌐 ルーティング（URL変更）と自動ログイン
-       ======================================================== */
-    function updateUrl(path) {
-      const fullPath = BASE_PATH + path;
-      history.pushState(null, "", fullPath);
-    }
-
-    // 初期起動時の状態チェック（自動ログイン含む）
+    // 初期起動時のログイン状態チェック
     window.addEventListener("DOMContentLoaded", () => {
       const savedUser = localStorage.getItem("scratch_user");
       if (savedUser) {
         targetUsername = savedUser;
         initDashboard();
-      } else {
-        updateUrl("/Home");
       }
     });
 
@@ -275,7 +263,7 @@
       this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
     });
 
-    /* ================================================= realm
+    /* ========================================================
        🔒 2. F12対策 & 動的右クリックメニュー
        ======================================================== */
     window.addEventListener("keydown", function (e) {
@@ -341,8 +329,8 @@
        📱 4. メインアプリケーション処理
        ======================================================== */
     function generateCode() {
-      rawAuthCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      authCode = "VERIFY-" + rawAuthCode;
+      const rawCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      authCode = "VERIFY-" + rawCode;
       return authCode;
     }
 
@@ -360,7 +348,6 @@
       showError("err-step1", "");
       targetUsername = input;
       showStep(2);
-      updateUrl("/Security");
     }
 
     function onTurnstileSuccess(token) {
@@ -369,7 +356,6 @@
       
       setTimeout(() => {
         showStep(3);
-        updateUrl(`/Verify/${rawAuthCode}`);
         startCommentPolling();
       }, 1000);
     }
@@ -403,7 +389,7 @@
             const commenter = matchedComment.author.username;
 
             if (commenter.toLowerCase() === targetUsername.toLowerCase()) {
-              // ログインデータを保存
+              // ログインデータをブラウザに保存
               localStorage.setItem("scratch_user", targetUsername);
               initDashboard();
             } else {
@@ -423,13 +409,11 @@
       targetUsername = "";
       usernameInput.value = "";
       showStep(1);
-      updateUrl("/Home");
     }
 
     function initDashboard() {
       isWaitingForComment = false;
       showStep(4);
-      updateUrl("/NotifyCount");
       document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
       updateMessageCount();
       setInterval(updateMessageCount, 10000);
@@ -502,7 +486,6 @@
       targetUsername = "";
       usernameInput.value = "";
       showStep(1);
-      updateUrl("/Home");
     }
   </script>
 </body>
