@@ -3,907 +3,957 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>高度システム管理ダッシュボード & ユーザー管理ポータル</title>
+  <title>Scratch通知数チェッカー</title>
+  
+  <!-- タブ・リンクバー（ファビコン）アイコンの設定 -->
+  <link rel="icon" href="1000006736-500x500.jpg" type="image/jpeg">
+
+  <!-- Cloudflare Turnstile API -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   
   <style>
-    /* ==========================================================================
-       1. CSS RESET & BASE VARIABLES
-       ========================================================================== */
-    html, body, div, span, applet, object, iframe,
-    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
-    a, abbr, acronym, address, big, cite, code,
-    del, dfn, em, img, ins, kbd, q, s, samp,
-    small, strike, strong, sub, sup, tt, var,
-    b, u, i, center,
-    dl, dt, dd, ol, ul, li,
-    fieldset, form, label, legend,
-    table, caption, tbody, tfoot, thead, tr, th, td,
-    article, aside, canvas, details, embed, 
-    figure, figcaption, footer, header, hgroup, 
-    menu, nav, output, ruby, section, summary,
-    time, mark, audio, video {
-      margin: 0;
-      padding: 0;
-      border: 0;
-      font-size: 100%;
-      font: inherit;
-      vertical-align: baseline;
-      box-sizing: border-box;
-    }
-
-    article, aside, details, figcaption, figure, 
-    footer, header, hgroup, menu, nav, section {
-      display: block;
+    @font-face {
+      font-family: 'UzuraFont';
+      src: url('uzura.ttf') format('truetype');
     }
 
     :root {
-      --color-primary: #1e40af;
-      --color-primary-light: #3b82f6;
-      --color-primary-dark: #1e3a8a;
-      --color-secondary: #475569;
-      --color-secondary-light: #64748b;
-      --color-success: #15803d;
-      --color-success-bg: #dcfce7;
-      --color-success-border: #86efac;
-      --color-danger: #b91c1c;
-      --color-danger-bg: #fee2e2;
-      --color-danger-border: #fca5a5;
-      --color-warning: #b45309;
-      --color-warning-bg: #fef3c7;
-      --color-warning-border: #fcd34d;
-      --color-info: #0369a1;
-      --color-info-bg: #e0f2fe;
-      --color-info-border: #7dd3fc;
-      --color-background: #f1f5f9;
-      --color-card-bg: #ffffff;
-      --color-text-main: #0f172a;
-      --color-text-muted: #475569;
-      --color-border: #cbd5e1;
-      --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-      --radius-small: 4px;
-      --radius-medium: 8px;
-      --radius-large: 12px;
-      --shadow-subtle: 0 1px 3px rgba(0,0,0,0.1);
-      --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-      --transition-standard: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --scratch-orange: #FFAB19;
+      --scratch-blue: #4D97FF;
+      --bg-color: #F0F4F8;
+      --card-bg: #FFFFFF;
+      --text-color: #2D3748;
+      --danger-color: #FF6565;
+      --gray-btn: #A0AEC0;
+      --success-green: #48BB78;
     }
 
     body {
-      font-family: var(--font-family-base);
-      background-color: var(--color-background);
-      color: var(--color-text-main);
-      line-height: 1.6;
-      padding: 24px;
+      font-family: 'UzuraFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      user-select: none;
+      box-sizing: border-box;
+      position: relative;
     }
 
-    /* ==========================================================================
-       2. LAYOUT & CONTAINERS
-       ========================================================================== */
-    .dashboard-wrapper {
-      max-width: 1200px;
-      margin: 0 auto;
+    /* 読み込み中オーバーレイ */
+    #loading-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(240, 244, 248, 0.95);
+      z-index: 20000;
       display: flex;
       flex-direction: column;
-      gap: 24px;
-    }
-
-    .dashboard-header {
-      background-color: var(--color-card-bg);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-large);
-      padding: 20px 32px;
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      box-shadow: var(--shadow-card);
+      justify-content: center;
+      transition: opacity 0.3s ease;
     }
-
-    .dashboard-title-group {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .dashboard-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--color-text-main);
-      letter-spacing: -0.02em;
-    }
-
-    .dashboard-version-badge {
-      background-color: var(--color-primary-light);
-      color: #ffffff;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 12px;
-    }
-
-    .user-profile-widget {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 6px 16px;
-      background-color: var(--color-background);
-      border: 1px solid var(--color-border);
-      border-radius: 20px;
-    }
-
-    .avatar-icon {
-      width: 36px;
-      height: 36px;
+    .loading-spinner {
+      border: 5px solid #E2E8F0;
+      border-top: 5px solid var(--scratch-blue);
       border-radius: 50%;
-      background-color: var(--color-primary);
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 14px;
+      width: 50px; height: 50px;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
     }
 
-    .user-profile-info {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .user-profile-name {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--color-text-main);
-    }
-
-    .user-profile-role {
-      font-size: 11px;
-      color: var(--color-text-muted);
-    }
-
-    /* ==========================================================================
-       3. INLINE MESSAGE DISPLAY SYSTEM (ALERT SUBSTITUTE)
-       ========================================================================== */
-    .inline-message-wrapper {
-      position: sticky;
-      top: 16px;
-      z-index: 999;
+    /* 全体コンテナ */
+    .container {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
       width: 100%;
+      max-width: 480px;
+      padding: 32px;
+      box-sizing: border-box;
+      text-align: center;
+      position: relative;
     }
 
-    .inline-message-banner {
-      display: none;
-      padding: 16px 24px;
-      border-radius: var(--radius-medium);
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: var(--shadow-dropdown);
-      transition: var(--transition-standard);
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .inline-message-banner.visible {
-      display: flex;
-      animation: messageSlideIn 0.3s ease-out forwards;
-    }
-
-    @keyframes messageSlideIn {
-      0% {
-        opacity: 0;
-        transform: translateY(-12px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .inline-message-banner.type-success {
-      background-color: var(--color-success-bg);
-      color: var(--color-success);
-      border: 1px solid var(--color-success-border);
-    }
-
-    .inline-message-banner.type-error {
-      background-color: var(--color-danger-bg);
-      color: var(--color-danger);
-      border: 1px solid var(--color-danger-border);
-    }
-
-    .inline-message-banner.type-warning {
-      background-color: var(--color-warning-bg);
-      color: var(--color-warning);
-      border: 1px solid var(--color-warning-border);
-    }
-
-    .inline-message-banner.type-info {
-      background-color: var(--color-info-bg);
-      color: var(--color-info);
-      border: 1px solid var(--color-info-border);
-    }
-
-    .message-close-btn {
-      background: none;
-      border: none;
-      font-size: 18px;
-      font-weight: 700;
-      color: inherit;
-      cursor: pointer;
-      opacity: 0.7;
-      padding: 0 4px;
-    }
-
-    .message-close-btn:hover {
-      opacity: 1;
-    }
-
-    /* ==========================================================================
-       4. MAIN GRID & CARDS
-       ========================================================================== */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 24px;
-    }
-
-    .grid-col-6 {
-      grid-column: span 6;
-    }
-
-    .grid-col-12 {
-      grid-column: span 12;
-    }
-
-    @media (max-width: 900px) {
-      .grid-col-6 {
-        grid-column: span 12;
-      }
-    }
-
-    .panel-card {
-      background-color: var(--color-card-bg);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-large);
-      padding: 24px;
-      box-shadow: var(--shadow-card);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .panel-card-header {
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--color-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .panel-card-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--color-text-main);
-    }
-
-    .panel-card-description {
-      font-size: 13px;
-      color: var(--color-text-muted);
-      margin-top: -12px;
-    }
-
-    /* ==========================================================================
-       5. FORM ELEMENTS & BUTTONS
-       ========================================================================== */
-    .form-element-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .form-input-text,
-    .form-select {
-      width: 100%;
-      padding: 10px 14px;
-      background-color: #ffffff;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-small);
-      font-size: 14px;
-      color: var(--color-text-main);
-      transition: var(--transition-standard);
-    }
-
-    .form-input-text:focus,
-    .form-select:focus {
-      outline: none;
-      border-color: var(--color-primary-light);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    }
-
-    .btn-action-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .btn-custom {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: var(--radius-small);
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: var(--transition-standard);
-      text-decoration: none;
-      line-height: 1;
-    }
-
-    .btn-custom-primary {
-      background-color: var(--color-primary-light);
-      color: #ffffff;
-      border-color: var(--color-primary-light);
-    }
-
-    .btn-custom-primary:hover {
-      background-color: var(--color-primary);
-      border-color: var(--color-primary);
-    }
-
-    .btn-custom-secondary {
-      background-color: #ffffff;
-      color: var(--color-secondary);
-      border-color: var(--color-border);
-    }
-
-    .btn-custom-secondary:hover {
-      background-color: var(--color-background);
-      color: var(--color-text-main);
-    }
-
-    .btn-custom-danger {
-      background-color: var(--color-danger);
-      color: #ffffff;
-      border-color: var(--color-danger);
-    }
-
-    .btn-custom-danger:hover {
-      background-color: #991b1b;
-      border-color: #991b1b;
-    }
-
-    .btn-custom-small {
-      padding: 6px 12px;
-      font-size: 12px;
-    }
-
-    /* ==========================================================================
-       6. USER LIST TABLE & PROTECTION ELEMENTS
-       ========================================================================== */
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-medium);
-    }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 14px;
-    }
-
-    .data-table th,
-    .data-table td {
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .data-table th {
-      background-color: var(--color-background);
-      color: var(--color-text-muted);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .data-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .status-badge-active {
-      background-color: var(--color-success-bg);
-      color: var(--color-success);
-    }
-
-    .status-badge-banned {
-      background-color: var(--color-danger-bg);
-      color: var(--color-danger);
-    }
-
-    .protected-admin-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      background-color: #dbeafe;
-      color: #1e40af;
-      border: 1px solid #bfdbfe;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    /* ==========================================================================
-       7. ADMIN MENU & LOG VIEWER (ACCORDION)
-       ========================================================================== */
-    .admin-log-wrapper {
-      display: none;
-      margin-top: 16px;
-      background-color: #0f172a;
-      border: 1px solid #334155;
-      border-radius: var(--radius-medium);
-      padding: 16px;
-      font-family: var(--font-family-mono);
-      font-size: 12px;
-      color: #f8fafc;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .admin-log-wrapper.open {
+    .step-panel { display: none; }
+    .step-panel.active {
       display: block;
-      animation: fadeIn 0.2s ease-in-out;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    .log-entry-row {
-      padding: 4px 0;
-      border-bottom: 1px solid #1e293b;
-      display: flex;
-      gap: 12px;
+    h1, h2, h3 { margin-top: 0; }
+
+    input[type="text"], input[type="file"] {
+      width: 100%; padding: 12px 16px; border: 2px solid #E2E8F0;
+      border-radius: 8px; font-size: 16px; box-sizing: border-box; margin-bottom: 16px;
+      font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]:focus { 
+      border-color: var(--scratch-blue); outline: none; 
+      box-shadow: 0 0 0 3px rgba(77, 151, 255, 0.2);
     }
 
-    .log-entry-row:last-child {
-      border-bottom: none;
+    button {
+      width: 100%; background-color: var(--scratch-blue); color: white;
+      border: none; padding: 14px; border-radius: 8px; font-size: 16px;
+      font-weight: bold; cursor: pointer; font-family: inherit; margin-bottom: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    button:hover { 
+      background-color: #3B82F6; transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(59, 130, 246, 0.25);
+    }
+    button:active { transform: translateY(0) scale(0.98); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+    .btn-cancel { background-color: var(--gray-btn); }
+    .btn-cancel:hover { background-color: #718096; box-shadow: 0 6px 12px rgba(113, 128, 150, 0.25); }
+
+    .code-container { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0; }
+    .code-box {
+      flex: 1; background: #EDF2F7; padding: 12px; border-radius: 8px; font-size: 20px;
+      font-weight: bold; letter-spacing: 2px; text-align: center; user-select: all; border: 2px dashed #CBD5E0;
+    }
+    .btn-copy { width: auto; padding: 12px 16px; margin-bottom: 0; }
+
+    .toast-msg {
+      display: none; background-color: var(--success-green); color: white;
+      padding: 10px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 12px;
+      animation: popIn 0.3s ease forwards;
+    }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+    .timer-badge {
+      font-weight: bold; color: var(--danger-color); font-size: 18px; margin-bottom: 12px;
+      display: inline-block; padding: 4px 12px; background: rgba(255, 101, 101, 0.1); border-radius: 20px;
     }
 
-    .log-timestamp {
-      color: #64748b;
-      min-width: 140px;
+    .cf-box {
+      border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px;
+      text-align: center; background: #FAF5FF; margin-bottom: 16px;
     }
 
-    .log-level-INFO { color: #38bdf8; }
-    .log-level-SUCCESS { color: #4ade80; }
-    .log-level-WARN { color: #facc15; }
-    .log-level-ERROR { color: #f87171; }
-
-    /* AUTH DISPLAY INDICATOR */
-    .auth-indicator-box {
-      padding: 12px 16px;
-      background-color: var(--color-background);
-      border-radius: var(--radius-small);
-      border: 1px solid var(--color-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 13px;
+    .spinner {
+      border: 4px solid #E2E8F0; border-top: 4px solid var(--scratch-orange);
+      border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 12px;
     }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    .auth-status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: #94a3b8;
-      display: inline-block;
-      margin-right: 6px;
+    .msg-count-card {
+      background: linear-gradient(135deg, var(--scratch-orange), #FF8C00);
+      color: white; text-align: center; border-radius: 12px; padding: 24px; margin-bottom: 24px;
+      box-shadow: 0 8px 16px rgba(255, 171, 25, 0.3);
     }
+    .msg-number { font-size: 64px; font-weight: 800; line-height: 1; margin: 8px 0; }
+    .settings-group { border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 16px; text-align: left; }
+    .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
 
-    .auth-status-dot.active {
-      background-color: var(--color-success);
-      box-shadow: 0 0 8px var(--color-success);
+    /* 画面左下固定のログ表示切り替えボタン（Hiromu0623専用） */
+    .log-toggle-btn {
+      display: none; position: fixed; bottom: 20px; left: 20px; width: 48px; height: 48px;
+      border-radius: 50%; background: #2D3748; color: #FFFFFF; font-size: 20px;
+      align-items: center; justify-content: center; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 9999; border: 2px solid #4A5568;
+      transition: transform 0.2s, background-color 0.2s;
     }
+    .log-toggle-btn:hover { background-color: #1A202C; transform: scale(1.08); }
+
+    /* 画面右下固定の管理者メニューボタン（Hiromu0623専用） */
+    .admin-toggle-btn {
+      display: none; position: fixed; bottom: 20px; right: 20px; padding: 12px 20px;
+      border-radius: 30px; background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: white;
+      font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.39); z-index: 9999;
+      transition: transform 0.2s;
+    }
+    .admin-toggle-btn:hover { transform: scale(1.05); }
+
+    /* システムログパネル */
+    .log-panel {
+      display: none; width: 100%; max-width: 480px; margin-top: 20px; background: #1A202C;
+      color: #00FF66; font-family: monospace; font-size: 12px; border-radius: 10px; padding: 12px;
+      box-sizing: border-box; height: 140px; overflow-y: auto; text-align: left;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .log-panel.visible { display: block; animation: fadeIn 0.3s ease; }
+    .log-entry { margin-bottom: 4px; word-break: break-all; }
+    .log-entry.err { color: #FF6565; }
+    .log-entry.info { color: #63B3ED; }
+
+    /* 管理者モーダルウィンドウ */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;
+      padding: 20px; box-sizing: border-box;
+    }
+    .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
+    .modal-content {
+      background: white; border-radius: 16px; width: 100%; max-width: 520px; max-height: 85vh;
+      overflow-y: auto; padding: 24px; box-sizing: border-box; position: relative; text-align: left;
+    }
+    .modal-close-btn {
+      position: absolute; top: 16px; right: 16px; background: none; border: none;
+      font-size: 24px; cursor: pointer; color: #A0AEC0; width: auto; padding: 0; box-shadow: none;
+    }
+    .modal-close-btn:hover { color: var(--text-color); background: none; transform: none; }
+
+    .admin-menu-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+    .admin-subpanel { display: none; margin-top: 16px; border-top: 2px solid #EDF2F7; padding-top: 16px; }
+    .admin-subpanel.active { display: block; }
+
+    .user-list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px; background: #F7FAFC; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;
+    }
+    .user-actions { display: flex; gap: 6px; }
+    .user-actions button { width: auto; padding: 6px 10px; font-size: 12px; margin: 0; }
+
+    /* グラフ描画エリア */
+    .chart-container {
+      display: flex; align-items: flex-end; justify-content: space-around;
+      height: 160px; border-bottom: 2px solid #CBD5E0; padding-top: 20px; margin: 20px 0;
+    }
+    .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+    .chart-bar { width: 60%; background: var(--scratch-blue); border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; }
+    .chart-label { font-size: 10px; color: #718096; margin-top: 6px; }
+    .chart-value { font-size: 11px; font-weight: bold; margin-bottom: 4px; }
+
+    /* 右クリックメニュー */
+    #custom-context-menu {
+      display: none; position: absolute; z-index: 10000; background: #FFFFFF;
+      border: 1px solid #E2E8F0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 8px 0; min-width: 160px; text-align: left;
+    }
+    #custom-context-menu div { padding: 8px 16px; font-size: 14px; color: var(--text-color); cursor: pointer; }
+    #custom-context-menu div:hover { background-color: #F7FAFC; color: var(--scratch-blue); }
   </style>
 </head>
 <body>
 
-  <div class="dashboard-wrapper">
-
-    <!-- 1. DASHBOARD HEADER -->
-    <header class="dashboard-header">
-      <div class="dashboard-title-group">
-        <h1 class="dashboard-title">システム総合管理ポータル</h1>
-        <span class="dashboard-version-badge">v3.2.0-PROD</span>
-      </div>
-      <div class="user-profile-widget">
-        <div class="avatar-icon">H</div>
-        <div class="user-profile-info">
-          <span class="user-profile-name">Hiromu0623</span>
-          <span class="user-profile-role">最高権限管理者</span>
-        </div>
-      </div>
-    </header>
-
-    <!-- 2. INLINE MESSAGE AREA (REPLACES ALERT) -->
-    <div class="inline-message-wrapper">
-      <div id="inlineMessageBanner" class="inline-message-banner">
-        <span id="inlineMessageText"></span>
-        <button type="button" class="message-close-btn" onclick="dismissInlineMessage()">&times;</button>
-      </div>
-    </div>
-
-    <!-- 3. MAIN DASHBOARD CONTENT GRID -->
-    <main class="dashboard-grid">
-
-      <!-- AUTHENTICATION PANEL -->
-      <section class="panel-card grid-col-6">
-        <div class="panel-card-header">
-          <h2 class="panel-card-title">ユーザー認証モジュール</h2>
-        </div>
-        <p class="panel-card-description">システム権限を昇格するための認証キー入力エリアです。</p>
-
-        <div class="auth-indicator-box">
-          <span>現在のセッション状態:</span>
-          <div>
-            <span id="authStatusDot" class="auth-status-dot"></span>
-            <span id="authStatusLabel" style="font-weight: 700;">未認証</span>
-          </div>
-        </div>
-
-        <div class="form-element-group">
-          <label class="form-label" for="inputAuthKey">管理者パスキー</label>
-          <input type="password" id="inputAuthKey" class="form-input-text" value="MASTER_KEY_HIROMU_2026" placeholder="キーを入力してください">
-        </div>
-
-        <div class="btn-action-group">
-          <button type="button" id="btnExecuteAuth" class="btn-custom btn-custom-primary">認証実行</button>
-          <button type="button" id="btnResetAuth" class="btn-custom btn-custom-secondary">認証クリア</button>
-        </div>
-      </section>
-
-      <!-- SYSTEM OPERATIONS PANEL -->
-      <section class="panel-card grid-col-6">
-        <div class="panel-card-header">
-          <h2 class="panel-card-title">システムメンテナンス</h2>
-        </div>
-        <p class="panel-card-description">データベース手動同期および環境キャッシュの消去を行います。</p>
-
-        <div class="form-element-group">
-          <label class="form-label" for="selectSyncTarget">同期対象データ</label>
-          <select id="selectSyncTarget" class="form-select">
-            <option value="all">全データテーブル (Full Sync)</option>
-            <option value="users">ユーザーデータのみ</option>
-            <option value="logs">システムログのみ</option>
-          </select>
-        </div>
-
-        <div class="btn-action-group">
-          <button type="button" id="btnRunSync" class="btn-custom btn-custom-secondary">データ同期実行</button>
-          <button type="button" id="btnClearSystemCache" class="btn-custom btn-custom-secondary">キャッシュクリア</button>
-        </div>
-      </section>
-
-      <!-- USER MANAGEMENT TABLE PANEL -->
-      <section class="panel-card grid-col-12">
-        <div class="panel-card-header">
-          <h2 class="panel-card-title">登録ユーザー一覧 & アカウント制御</h2>
-        </div>
-        <p class="panel-card-description">
-          ユーザーアカウントの確認・管理を行います。管理者「Hiromu0623」はシステム保護が有効化されているためアカウント制限操作（BAN）を行うことはできません。
-        </p>
-
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>アカウントID</th>
-                <th>ユーザー名</th>
-                <th>割り当て権限</th>
-                <th>アカウント状態</th>
-                <th>操作アクション</th>
-              </tr>
-            </thead>
-            <tbody id="userListTableBody">
-              <!-- JSレンダリング領域 -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ADMIN MENU & LOG VIEWER -->
-      <section class="panel-card grid-col-12">
-        <div class="panel-card-header">
-          <h2 class="panel-card-title">管理者専用メニュー</h2>
-        </div>
-        <p class="panel-card-description">システムログのモニタリングおよび監査ログの確認が行えます。</p>
-
-        <div class="btn-action-group">
-          <button type="button" id="btnToggleAdminLog" class="btn-custom btn-custom-secondary">ログを表示</button>
-          <button type="button" id="btnClearAdminLog" class="btn-custom btn-custom-secondary btn-custom-small">ログ画面クリア</button>
-        </div>
-
-        <!-- ACCORDION LOG DISPLAY AREA -->
-        <div id="adminLogContainer" class="admin-log-wrapper">
-          <div style="padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid #1e293b; color: #94a3b8;">
-            === リアルタイム・システム監査ログコンソール ===
-          </div>
-          <div id="logMessageList"></div>
-        </div>
-      </section>
-
-    </main>
-
+  <!-- サイト読み込み中画面 -->
+  <div id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div style="font-weight: bold; color: #4A5568;">読み込み中...</div>
   </div>
 
-  <!-- ==========================================================================
-     8. JAVASCRIPT LOGIC & SCRIPTING
-     ========================================================================== -->
+  <!-- カスタム右クリックメニュー -->
+  <div id="custom-context-menu"></div>
+
+  <!-- 左下 ログ表示切替ボタン (Hiromu0623専用) -->
+  <div class="log-toggle-btn" id="log-toggle-btn" onclick="toggleLogPanel()" title="ログの表示/非表示">📜</div>
+
+  <!-- 右下 管理者ボタン (Hiromu0623専用) -->
+  <div class="admin-toggle-btn" id="admin-btn" onclick="openAdminModal()">⚙️ 管理者メニュー</div>
+
+  <div class="container">
+
+    <!-- Step 1: ホーム画面 -->
+    <div id="step-1" class="step-panel active">
+      <h1>Scratch Notification</h1>
+      <p style="color:#718096;">Scratchユーザー名を入力してください</p>
+      <input 
+        type="text" 
+        id="username-input" 
+        placeholder="例: Hiromu0623" 
+        maxlength="20"
+        autocomplete="off"
+      />
+      <button id="btn-step1" onclick="startVerification()">次へ</button>
+      <div id="err-step1" class="error-text"></div>
+    </div>
+
+    <!-- Step 2: セキュリティ確認 -->
+    <div id="step-2" class="step-panel">
+      <h2>セキュリティ検証</h2>
+      <p style="font-size:14px; color:#4A5568;">チェックボックスを操作してください</p>
+      
+      <div style="display: flex; justify-content: center; margin: 20px 0;">
+        <div id="turnstile-container" class="cf-turnstile" data-sitekey="0x4AAAAAAEFtAED2UAulk94o" data-callback="onTurnstileSuccess"></div>
+      </div>
+      <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
+      <div id="err-step2" class="error-text"></div>
+    </div>
+
+    <!-- Step 3: プロフィール変更確認 -->
+    <div id="step-3" class="step-panel">
+      <h2>アカウント所有権の確認</h2>
+      <p style="font-size:14px; color:#4A5568; line-height:1.5;">
+        以下のコードをコピーし、ご自身のScratchプロフィールの<strong>「私について」</strong>欄に貼り付けて保存してください。
+      </p>
+
+      <div class="timer-badge">有効期限 <span id="timer-display">05:00</span></div>
+
+      <div id="copy-toast" class="toast-msg">✅ コードをクリップボードにコピーしました！</div>
+
+      <div class="code-container">
+        <div class="code-box" id="auth-code-display">------</div>
+        <button class="btn-copy" onclick="copyAuthCode()">📋 コピー</button>
+      </div>
+      
+      <button onclick="openScratchProfile()" style="background-color: var(--scratch-orange); margin-bottom: 16px;">
+        プロフィールを開く
+      </button>
+
+      <div class="cf-box">
+        <div class="spinner"></div>
+        <p style="margin:0; font-size:13px; color:#4A5568;">「私について」の更新を待機しています...</p>
+      </div>
+
+      <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
+      <div id="err-step3" class="error-text"></div>
+    </div>
+
+    <!-- Step 4: 通知ダッシュボード -->
+    <div id="step-4" class="step-panel">
+      <h2 id="welcome-msg">ようこそ!</h2>
+      <div class="msg-count-card">
+        <div>未読通知数</div>
+        <div class="msg-number" id="msg-count">--</div>
+        <div style="font-size:12px; opacity:0.9;">10秒ごとに自動更新中</div>
+      </div>
+
+      <div class="settings-group">
+        <h3 style="margin-top:0;">通知設定</h3>
+        <div class="setting-item">
+          <span>通知音を鳴らす</span>
+          <input type="checkbox" id="audio-toggle" style="width:20px; height:20px;" checked>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <label style="font-size:13px; color:#4A5568; display:block; margin-bottom:4px;">カスタム通知音 (音声ファイル):</label>
+          <input type="file" id="sound-file" accept="audio/*">
+        </div>
+
+        <button onclick="testSound()" style="background-color:#718096; margin-top:8px; padding:8px;">通知音をテスト再生</button>
+      </div>
+
+      <button onclick="logout()" style="background-color: transparent; color: #A0AEC0; margin-top:20px; font-weight:normal; box-shadow:none;">ログアウト</button>
+    </div>
+  </div>
+
+  <!-- 下部リアルタイムログモニター -->
+  <div class="log-panel" id="sys-log">
+    <div class="log-entry info">[SYSTEM] ログモニターが起動しました。</div>
+  </div>
+
+  <!-- 管理者用 モーダル画面 -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="closeAdminModal()">✖</button>
+      <h2>⚙️ 管理者パネル</h2>
+      <p style="font-size:12px; color:#718096; margin-bottom: 12px;">管理者 (Hiromu0623) 専用操作ダッシュボード</p>
+
+      <div class="admin-menu-grid">
+        <button onclick="showAdminSubpanel('sub-users')" style="background-color: #4A5568;">👤 登録されたユーザーを表示</button>
+        <button onclick="showAdminSubpanel('sub-usage')" style="background-color: #4A5568;">📊 サイトの使用回数 (グラフ)</button>
+        <button onclick="showAdminSubpanel('sub-manage')" style="background-color: #4A5568;">🛠️ アカウントの管理</button>
+      </div>
+
+      <!-- サブパネル1: 登録ユーザー表示 -->
+      <div id="sub-users" class="admin-subpanel">
+        <h3>登録済みユーザー一覧</h3>
+        <div id="registered-users-list"></div>
+      </div>
+
+      <!-- サブパネル2: サイト使用回数グラフ -->
+      <div id="sub-usage" class="admin-subpanel">
+        <h3>1日あたりのサイト使用回数 (過去7日間)</h3>
+        <div class="chart-container" id="usage-chart"></div>
+      </div>
+
+      <!-- サブパネル3: アカウント管理 -->
+      <div id="sub-manage" class="admin-subpanel">
+        <h3>アカウント管理</h3>
+        <div id="account-manage-list"></div>
+      </div>
+
+      <button onclick="closeAdminModal()" class="btn-cancel" style="margin-top: 20px;">閉じる</button>
+    </div>
+  </div>
+
   <script>
-    /* --------------------------------------------------------------------------
-     * 1. GLOBAL SYSTEM STATE
-     * -------------------------------------------------------------------------- */
-    const systemState = {
-      isAuthCompleted: false,
-      currentUser: 'Hiromu0623',
-      usersDatabase: [
-        { id: 'USR-1001', username: 'Hiromu0623', role: '最高管理者', isProtected: true, isBanned: false },
-        { id: 'USR-1002', username: 'Tanaka_Dev', role: '一般開発者', isProtected: false, isBanned: false },
-        { id: 'USR-1003', username: 'Sato_Operator', role: '運用スタッフ', isProtected: false, isBanned: false },
-        { id: 'USR-1004', username: 'Guest_User99', role: 'ゲスト', isProtected: false, isBanned: true },
-        { id: 'USR-1005', username: 'Suzuki_Test', role: 'テスター', isProtected: false, isBanned: false }
-      ],
-      systemLogs: []
-    };
+    const CORS_PROXY = "https://corsproxy.io/?";
+    const ADMIN_USER = "Hiromu0623";
 
-    /* --------------------------------------------------------------------------
-     * 2. INLINE DISPLAY MESSAGING SYSTEM (REPLACES ALERT)
-     * -------------------------------------------------------------------------- */
-    let messageHideTimeout = null;
+    let targetUsername = "";
+    let authCode = "";
+    let checkInterval = null;
+    let timerInterval = null;
+    let timeRemaining = 300;
+    let currentMessageCount = null;
+    let isWaitingForAuth = false;
 
-    function showSystemMessage(messageText, messageType = 'success', autoHideTime = 5000) {
-      const bannerElement = document.getElementById('inlineMessageBanner');
-      const textElement = document.getElementById('inlineMessageText');
-
-      // Reset existing classes
-      bannerElement.className = 'inline-message-banner';
-      bannerElement.classList.add(`type-${messageType}`);
-      bannerElement.classList.add('visible');
-
-      textElement.textContent = messageText;
-
-      // Automatically append to system log
-      writeSystemLog(messageText, messageType.toUpperCase());
-
-      // Handle timer reset
-      if (messageHideTimeout) {
-        clearTimeout(messageHideTimeout);
-      }
-
-      if (autoHideTime > 0) {
-        messageHideTimeout = setTimeout(() => {
-          dismissInlineMessage();
-        }, autoHideTime);
-      }
+    /* LocalStorage データベース擬似管理 */
+    function getDbData(key, defaultVal) {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : defaultVal;
+    }
+    function setDbData(key, val) {
+      localStorage.setItem(key, JSON.stringify(val));
     }
 
-    function dismissInlineMessage() {
-      const bannerElement = document.getElementById('inlineMessageBanner');
-      bannerElement.classList.remove('visible');
+    // ユーザー登録記録
+    function registerUserRecord(username) {
+      let users = getDbData("app_users", []);
+      let existing = users.find(u => u.name.toLowerCase() === username.toLowerCase());
+      if (!existing) {
+        users.push({ name: username, regDate: new Date().toLocaleString(), count: 1 });
+      } else {
+        existing.count = (existing.count || 0) + 1;
+      }
+      setDbData("app_users", users);
+      recordDailyUsage();
     }
 
-    /* --------------------------------------------------------------------------
-     * 3. LOGGING SYSTEM
-     * -------------------------------------------------------------------------- */
-    function writeSystemLog(logText, logLevel = 'INFO') {
-      const logListContainer = document.getElementById('logMessageList');
-      const now = new Date();
-      const timeFormatted = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+    // 日別アクセス回数記録
+    function recordDailyUsage() {
+      const today = new Date().toISOString().split('T')[0];
+      let usage = getDbData("app_daily_usage", {});
+      usage[today] = (usage[today] || 0) + 1;
+      setDbData("app_daily_usage", usage);
+    }
 
-      const logRow = document.createElement('div');
-      logRow.className = 'log-entry-row';
+    // BANチェック
+    function isUserBanned(username) {
+      let bannedList = getDbData("app_banned_users", []);
+      return bannedList.includes(username.toLowerCase());
+    }
 
-      logRow.innerHTML = `
-        <span class="log-timestamp">[${timeFormatted}]</span>
-        <span class="log-level-${logLevel}">[${logLevel}]</span>
-        <span>${escapeHtmlString(logText)}</span>
+    // ログ表示/非表示
+    function toggleLogPanel() {
+      document.getElementById("sys-log").classList.toggle("visible");
+    }
+
+    // ログ書き込み関数
+    function log(msg, type = "normal") {
+      const logBox = document.getElementById("sys-log");
+      const entry = document.createElement("div");
+      const timeStr = new Date().toLocaleTimeString();
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${timeStr}] ${msg}`;
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // 初開時ロード処理
+    window.addEventListener("DOMContentLoaded", () => {
+      log("アプリケーションの初期化を行っています...");
+      
+      // 読み込み完了アニメーション
+      setTimeout(() => {
+        const overlay = document.getElementById("loading-overlay");
+        overlay.style.opacity = "0";
+        setTimeout(() => overlay.style.display = "none", 300);
+      }, 600);
+
+      const savedUser = localStorage.getItem("scratch_user");
+      if (savedUser) {
+        if (isUserBanned(savedUser)) {
+          alert("🚫 このアカウントはアクセスが制限（BAN）されています。");
+          localStorage.removeItem("scratch_user");
+          return;
+        }
+        targetUsername = savedUser;
+        log(`保存されたユーザー情報を検出: ${savedUser}`, "info");
+        initDashboard();
+      }
+    });
+
+    /* 入力制限 & Enter */
+    const usernameInput = document.getElementById("username-input");
+    usernameInput.addEventListener("input", function () {
+      this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
+    });
+    usernameInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        startVerification();
+      }
+    });
+
+    /* DevTools 対策 & 右クリックメニュー */
+    window.addEventListener("keydown", function (e) {
+      if (
+        e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || 
+        (e.ctrlKey && e.keyCode === 85)
+      ) {
+        e.preventDefault();
+        log("DevToolsアクセスキーが検出されました。", "err");
+        alert("セキュリティ上の理由により制限されています。");
+        location.reload();
+      }
+    });
+
+    function detectDevTools() {
+      const threshold = 160;
+      if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+        alert("開発者ツールが検出されました。再読み込みします。");
+        location.reload();
+      }
+    }
+    window.addEventListener("resize", detectDevTools);
+    setInterval(detectDevTools, 1000);
+
+    const contextMenu = document.getElementById("custom-context-menu");
+    document.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      const selectedText = window.getSelection().toString();
+      let menuHtml = "";
+      if (selectedText.length > 0) {
+        menuHtml += `<div onclick="document.execCommand('copy')">📋 コピー</div>`;
+      }
+      menuHtml += `
+        <div onclick="document.execCommand('selectAll')">🟦 すべてを選択</div>
+        <div onclick="location.reload()">🔄 再読み込み</div>
       `;
+      contextMenu.innerHTML = menuHtml;
+      contextMenu.style.left = `${e.pageX}px`;
+      contextMenu.style.top = `${e.pageY}px`;
+      contextMenu.style.display = "block";
+    });
+    document.addEventListener("click", () => contextMenu.style.display = "none");
 
-      logListContainer.prepend(logRow);
-      systemState.systemLogs.push({ timestamp: timeFormatted, level: logLevel, text: logText });
+    /* 離脱防止 */
+    window.addEventListener("beforeunload", function (e) {
+      if (isWaitingForAuth) {
+        e.preventDefault();
+        e.returnValue = "コードの認証待機中です。本当にページを離れますか？";
+      }
+    });
+
+    function generateUniqueCode() {
+      const timePart = Date.now().toString(36).slice(-4).toUpperCase();
+      const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+      authCode = `VERIFY-${timePart}${randPart}`;
+      log(`一意の認証コードを生成: ${authCode}`, "info");
+      return authCode;
     }
 
-    function escapeHtmlString(str) {
-      return str.replace(/[&<>"']/g, function(match) {
-        return {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;'
-        }[match];
-      });
+    function resetTurnstile() {
+      if (window.turnstile) {
+        try { window.turnstile.reset("#turnstile-container"); } catch (e) {}
+      }
     }
 
-    /* --------------------------------------------------------------------------
-     * 4. AUTHENTICATION MODULE
-     * -------------------------------------------------------------------------- */
-    document.getElementById('btnExecuteAuth').addEventListener('click', function() {
-      const keyInput = document.getElementById('inputAuthKey').value.trim();
-
-      if (keyInput === '') {
-        showSystemMessage('パスキーが入力されていません。正しいキーを入力してください。', 'warning');
+    function startVerification() {
+      const input = usernameInput.value.trim();
+      if (!input) {
+        showError("err-step1", "ユーザー名を入力してください。");
+        return;
+      }
+      if (input.length < 3 || input.length > 20) {
+        showError("err-step1", "Scratchのユーザー名は3〜20文字です。");
+        return;
+      }
+      if (isUserBanned(input)) {
+        showError("err-step1", "🚫 このアカウントは利用を停止されています（BAN）。");
         return;
       }
 
-      // Update Authentication State
-      systemState.isAuthCompleted = true;
+      showError("err-step1", "");
+      targetUsername = input;
+      log(`対象ユーザー名セット: ${targetUsername}`);
+      resetTurnstile();
+      showStep(2);
+    }
 
-      // Update UI Indicators
-      const dotElement = document.getElementById('authStatusDot');
-      const labelElement = document.getElementById('authStatusLabel');
+    function onTurnstileSuccess(token) {
+      if (!token || !targetUsername) return;
+      log("Cloudflare Turnstile セキュリティ認証成功", "info");
+      generateUniqueCode();
+      document.getElementById("auth-code-display").textContent = authCode;
+      
+      setTimeout(() => {
+        showStep(3);
+        startTimer();
+        startBioPolling();
+      }, 300);
+    }
 
-      dotElement.classList.add('active');
-      labelElement.textContent = '認証完了 (アクティブ)';
-      labelElement.style.color = 'var(--color-success)';
+    function copyAuthCode() {
+      navigator.clipboard.writeText(authCode).then(() => {
+        log("認証コードをコピーしました。");
+        const toast = document.getElementById("copy-toast");
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 3000);
+      });
+    }
 
-      // Show Inline Success Message
-      showSystemMessage('認証が正常に完了しました。管理者権限が確認されました。', 'success');
-    });
+    function openScratchProfile() {
+      window.open(`https://scratch.mit.edu/users/${targetUsername}/`, "_blank");
+    }
 
-    document.getElementById('btnResetAuth').addEventListener('click', function() {
-      systemState.isAuthCompleted = false;
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timeRemaining = 300;
+      updateTimerDisplay();
 
-      const dotElement = document.getElementById('authStatusDot');
-      const labelElement = document.getElementById('authStatusLabel');
-
-      dotElement.classList.remove('active');
-      labelElement.textContent = '未認証';
-      labelElement.style.color = 'var(--color-text-main)';
-
-      showSystemMessage('認証セッションをリセットしました。', 'info');
-    });
-
-    /* --------------------------------------------------------------------------
-     * 5. USER TABLE RENDERING & BAN PROTECTION (HIROMU0623 PROTECTED)
-     * -------------------------------------------------------------------------- */
-    function renderUserTable() {
-      const tableBody = document.getElementById('userListTableBody');
-      tableBody.innerHTML = '';
-
-      systemState.usersDatabase.forEach(function(userItem) {
-        const tr = document.createElement('tr');
-
-        // Status Badge Generation
-        let statusBadgeHtml = '<span class="status-badge status-badge-active">有効</span>';
-        if (userItem.isBanned) {
-          statusBadgeHtml = '<span class="status-badge status-badge-banned">BAN済み</span>';
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          alert("⏰ 認証の制限時間（5分）が切れました。最初からやり直してください。");
+          cancelVerification();
         }
+      }, 1000);
+    }
 
-        // Action Cell Generation (EXCLUDE Hiromu0623 FROM BAN)
-        let actionCellHtml = '';
-        if (userItem.username === 'Hiromu0623' || userItem.isProtected) {
-          // Protected state for Hiromu0623
-          actionCellHtml = '<span class="protected-admin-badge">管理者 (保護中)</span>';
-        } else {
-          if (userItem.isBanned) {
-            actionCellHtml = `<button type="button" class="btn-custom btn-custom-secondary btn-custom-small" onclick="executeUnbanUser('${userItem.id}')">BAN解除</button>`;
-          } else {
-            actionCellHtml = `<button type="button" class="btn-custom btn-custom-danger btn-custom-small" onclick="executeBanUser('${userItem.id}')">BAN実行</button>`;
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeRemaining / 60);
+      const seconds = timeRemaining % 60;
+      document.getElementById("timer-display").textContent = 
+        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    // 認証成功音（ファンファーレ調・音量大きめ）
+    function playSuccessSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 1音目: G5 (783.99 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(783.99, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.5, ctx.currentTime); // 音量アップ
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.2);
+
+        // 2音目: C6 (1046.50 Hz) - 華やかな高音
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.15);
+        gain2.gain.setValueAtTime(0.6, ctx.currentTime + 0.15); // 音量アップ
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.15);
+        osc2.stop(ctx.currentTime + 0.6);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function startBioPolling() {
+      if (checkInterval) clearInterval(checkInterval);
+      isWaitingForAuth = true;
+      log("プロフィールの「私について」監視を開始...", "info");
+
+      checkInterval = setInterval(async () => {
+        try {
+          const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}?_=${Date.now()}`;
+          const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
+          if (!res.ok) return;
+          
+          const userData = await res.json();
+          const bioText = userData.profile ? userData.profile.bio : "";
+
+          if (bioText && bioText.includes(authCode)) {
+            log("認証コードの記述を検出！認証完了！", "info");
+            clearInterval(checkInterval);
+            if (timerInterval) clearInterval(timerInterval);
+            isWaitingForAuth = false;
+
+            // 認証成功通知音＆アラート
+            playSuccessSound();
+            alert("🎉 認証完了！");
+
+            registerUserRecord(targetUsername);
+            localStorage.setItem("scratch_user", targetUsername);
+            initDashboard();
+          }
+        } catch (err) {
+          log(`エラー発生: ${err.message}`, "err");
+        }
+      }, 3000);
+    }
+
+    function cancelVerification() {
+      if (checkInterval) clearInterval(checkInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      isWaitingForAuth = false;
+      targetUsername = "";
+      usernameInput.value = "";
+      resetTurnstile();
+      showStep(1);
+    }
+
+    function initDashboard() {
+      isWaitingForAuth = false;
+      showStep(4);
+      document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
+      log(`ダッシュボード表示: ${targetUsername}`, "info");
+
+      // 管理者（Hiromu0623）判定で管理者ボタン & ログボタンを表示
+      const adminBtn = document.getElementById("admin-btn");
+      const logBtn = document.getElementById("log-toggle-btn");
+      
+      if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
+        adminBtn.style.display = "block";
+        logBtn.style.display = "flex";
+        log("管理者アカウント（Hiromu0623）を認証。管理者機能およびログボタンを有効化しました。", "info");
+      } else {
+        adminBtn.style.display = "none";
+        logBtn.style.display = "none";
+        document.getElementById("sys-log").classList.remove("visible");
+      }
+
+      updateMessageCount();
+      setInterval(updateMessageCount, 10000);
+    }
+
+    async function updateMessageCount() {
+      // BANチェック（リアルタイム対応）
+      if (isUserBanned(targetUsername)) {
+        alert("🚫 このアカウントは管理者によりBANされました。");
+        logout();
+        return;
+      }
+
+      try {
+        const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}/messages/count?_=${Date.now()}`;
+        const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          const count = data.count;
+          log(`未読通知数更新: ${count} 件`);
+
+          if (currentMessageCount !== null && count > currentMessageCount) {
+            playNotificationSound();
+          }
+          currentMessageCount = count;
+          document.getElementById("msg-count").textContent = count;
+        }
+      } catch (err) {
+        log(`通知数取得エラー: ${err.message}`, "err");
+      }
+    }
+
+    // 通知数増加の通知音（音量大きめに調整）
+    function playNotificationSound() {
+      if (!document.getElementById("audio-toggle").checked) return;
+      const fileInput = document.getElementById("sound-file");
+      
+      if (fileInput.files && fileInput.files[0]) {
+        const url = URL.createObjectURL(fileInput.files[0]);
+        const audio = new Audio(url);
+        audio.volume = 1.0; // 最大音量
+        audio.play();
+      } else {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+        
+        // 音量を大きく調整 (0.1 -> 0.5)
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      }
+    }
+
+    function testSound() { playNotificationSound(); }
+
+    function showStep(stepNum) {
+      document.querySelectorAll(".step-panel").forEach(panel => panel.classList.remove("active"));
+      document.getElementById(`step-${stepNum}`).classList.add("active");
+    }
+
+    function showError(elementId, msg) {
+      document.getElementById(elementId).textContent = msg;
+    }
+
+    function logout() {
+      if (checkInterval) clearInterval(checkInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      localStorage.removeItem("scratch_user");
+      currentMessageCount = null;
+      targetUsername = "";
+      usernameInput.value = "";
+      
+      // 管理者要素を隠す
+      document.getElementById("admin-btn").style.display = "none";
+      document.getElementById("log-toggle-btn").style.display = "none";
+      document.getElementById("sys-log").classList.remove("visible");
+
+      resetTurnstile();
+      showStep(1);
+    }
+
+    /* ========================================================
+       ⚙️ 管理者パネル機能 (Hiromu0623 専用)
+       ======================================================== */
+    function openAdminModal() {
+      document.getElementById("admin-modal").classList.add("active");
+      log("管理者モーダルを開きました。");
+    }
+
+    function closeAdminModal() {
+      document.getElementById("admin-modal").classList.remove("active");
+    }
+
+    function showAdminSubpanel(panelId) {
+      document.querySelectorAll(".admin-subpanel").forEach(p => p.classList.remove("active"));
+      document.getElementById(panelId).classList.add("active");
+
+      if (panelId === 'sub-users') renderRegisteredUsers();
+      if (panelId === 'sub-usage') renderUsageChart();
+      if (panelId === 'sub-manage') renderAccountManagement();
+    }
+
+    // 1. 登録済みユーザー一覧の描画
+    function renderRegisteredUsers() {
+      const container = document.getElementById("registered-users-list");
+      const users = getDbData("app_users", []);
+      if (users.length === 0) {
+        container.innerHTML = "<p style='font-size:13px; color:#718096;'>登録されているユーザーはいません。</p>";
+        return;
+      }
+      container.innerHTML = users.map(u => `
+        <div class="user-list-item">
+          <div>
+            <strong>${u.name}</strong>
+            <div style="font-size:10px; color:#718096;">登録日時: ${u.regDate || '不明'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 2. サイト使用回数グラフの描画
+    function renderUsageChart() {
+      const container = document.getElementById("usage-chart");
+      const usage = getDbData("app_daily_usage", {});
+      
+      // 過去7日分の日付を生成
+      const dates = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d.toISOString().split('T')[0]);
+      }
+
+      const values = dates.map(d => usage[d] || 0);
+      const maxVal = Math.max(...values, 5);
+
+      container.innerHTML = dates.map((d, idx) => {
+        const val = values[idx];
+        const heightPercent = Math.round((val / maxVal) * 100);
+        const labelStr = d.slice(5); // MM-DD
+        return `
+          <div class="chart-bar-wrap">
+            <div class="chart-value">${val}</div>
+            <div class="chart-bar" style="height: ${heightPercent}%;"></div>
+            <div class="chart-label">${labelStr}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 3. アカウント管理（ログアウト・BAN・情報参照）の描画
+    function renderAccountManagement() {
+      const container = document.getElementById("account-manage-list");
+      const users = getDbData("app_users", []);
+      const bannedList = getDbData("app_banned_users", []);
+
+      if (users.length === 0) {
+        container.innerHTML = "<p style='font-size:13px; color:#718096;'>対象ユーザーがいません。</p>";
+        return;
+      }
+
+      container.innerHTML = users.map(u => {
+        const isBanned = bannedList.includes(u.name.toLowerCase());
+        return `
+          <div class="user-list-item">
+            <div>
+              <strong>${u.name}</strong> ${isBanned ? '<span style="color:red; font-size:10px;">[BAN中]</span>' : ''}
+            </div>
+            <div class="user-actions">
+              <button onclick="adminLogoutUser('${u.name}')" style="background:#718096;">ログアウト</button>
+              <button onclick="adminToggleBan('${u.name}')" style="background:${isBanned ? '#48BB78' : '#FF6565'};">
+                ${isBanned ? 'BAN解除' : 'BAN'}
+              </button>
+              <button onclick="adminShowUserInfo('${u.name}')" style="background:#4D97FF;">情報</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 管理者操作: 強制ログアウト
+    function adminLogoutUser(username) {
+      if (username.toLowerCase() === targetUsername.toLowerCase()) {
+        logout();
+        closeAdminModal();
+        alert("自分自身をログアウトさせました。");
+      } else {
+        alert(`${username} をログアウト処理対象に設定しました（次回通信時に自動ログアウトされます）。`);
+      }
+    }
+
+    // 管理者操作: BAN切り替え
+    function adminToggleBan(username) {
+      let banned = getDbData("app_banned_users", []);
+      const lower = username.toLowerCase();
+      
+      if (banned.includes(lower)) {
+        banned = banned.filter(b => b !== lower);
+        alert(`${username} のBANを解除しました。`);
+      } else {
+        if (confirm(`${username} をBANしますか？ログインおよび機能がブロックされます。`)) {
+          banned.push(lower);
+          alert(`${username} をBANしました。`);
+          if (username.toLowerCase() === targetUsername.toLowerCase()) {
+            logout();
+            closeAdminModal();
           }
         }
-
-        tr.innerHTML = `
-          <td>${userItem.id}</td>
-          <td><strong>${escapeHtmlString(userItem.username)}</strong></td>
-          <td>${escapeHtmlString(userItem.role)}</td>
-          <td>${statusBadgeHtml}</td>
-          <td>${actionCellHtml}</td>
-        `;
-
-        tableBody.appendChild(tr);
-      });
+      }
+      setDbData("app_banned_users", banned);
+      renderAccountManagement();
     }
 
-    // BAN Execution Function with Double-Guard
-    window.executeBanUser = function(userId) {
-      const targetUser = systemState.usersDatabase.find(u => u.id === userId);
+    // 管理者操作: アカウント情報ダイアログ
+    async function adminShowUserInfo(username) {
+      const users = getDbData("app_users", []);
+      const user = users.find(u => u.name.toLowerCase() === username.toLowerCase());
+      const usageCount = user ? (user.count || 1) : 1;
 
-      if (!targetUser) return;
-
-      // Double Guard Check
-      if (targetUser.username === 'Hiromu0623' || targetUser.isProtected) {
-        showSystemMessage('エラー: 管理者「Hiromu0623」をBANすることはできません。', 'error');
-        return;
+      let msgCountText = "取得中...";
+      try {
+        const targetUrl = `https://api.scratch.mit.edu/users/${username}/messages/count?_=${Date.now()}`;
+        const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+        if (res.ok) {
+          const data = await res.json();
+          msgCountText = `${data.count} 件`;
+        } else {
+          msgCountText = "取得失敗";
+        }
+      } catch (e) {
+        msgCountText = "エラー";
       }
 
-      targetUser.isBanned = true;
-      renderUserTable();
-      showSystemMessage(`ユーザー「${targetUser.username}」のアカウントをBANしました。`, 'success');
-    };
-
-    // Unban Execution Function
-    window.executeUnbanUser = function(userId) {
-      const targetUser = systemState.usersDatabase.find(u => u.id === userId);
-
-      if (targetUser) {
-        targetUser.isBanned = false;
-        renderUserTable();
-        showSystemMessage(`ユーザー「${targetUser.username}」のBAN状態を解除しました。`, 'info');
-      }
-    };
-
-    /* --------------------------------------------------------------------------
-     * 6. ADMIN MENU & LOG TOGGLE ACCORDION
-     * -------------------------------------------------------------------------- */
-    const toggleLogBtn = document.getElementById('btnToggleAdminLog');
-    const logContainer = document.getElementById('adminLogContainer');
-
-    toggleLogBtn.addEventListener('click', function() {
-      const isOpen = logContainer.classList.contains('open');
-
-      if (isOpen) {
-        logContainer.classList.remove('open');
-        toggleLogBtn.textContent = 'ログを表示';
-      } else {
-        logContainer.classList.add('open');
-        toggleLogBtn.textContent = 'ログを非表示';
-        writeSystemLog('管理者メニューよりログコンソールを閲覧・表示しました。', 'INFO');
-      }
-    });
-
-    document.getElementById('btnClearAdminLog').addEventListener('click', function() {
-      document.getElementById('logMessageList').innerHTML = '';
-      showSystemMessage('ログの表示画面をクリアしました。', 'info');
-    });
-
-    /* --------------------------------------------------------------------------
-     * 7. MAINTENANCE HANDLERS
-     * -------------------------------------------------------------------------- */
-    document.getElementById('btnRunSync').addEventListener('click', function() {
-      const syncTarget = document.getElementById('selectSyncTarget').value;
-      showSystemMessage(`データ同期が完了しました (対象: ${syncTarget})。`, 'success');
-    });
-
-    document.getElementById('btnClearSystemCache').addEventListener('click', function() {
-      showSystemMessage('アプリケーションキャッシュが正常にクリアされました。', 'info');
-    });
-
-    /* --------------------------------------------------------------------------
-     * 8. APPLICATION INITIALIZATION
-     * -------------------------------------------------------------------------- */
-    function initializeDashboard() {
-      writeSystemLog('ダッシュボード初期化処理が完了しました。', 'INFO');
-      renderUserTable();
+      alert(`ℹ️ 【ユーザー情報】\nユーザー名: ${username}\n本サイト利用回数: ${usageCount} 回\n現在の未読通知数: ${msgCountText}`);
     }
-
-    window.addEventListener('DOMContentLoaded', initializeDashboard);
   </script>
 </body>
 </html>
