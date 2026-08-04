@@ -12,7 +12,6 @@
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   
   <style>
-    /* うずらフォントの読み込み設定 */
     @font-face {
       font-family: 'UzuraFont';
       src: url('uzura.ttf') format('truetype');
@@ -184,7 +183,7 @@
       <p style="font-size:14px; color:#4A5568;">チェックボックスを操作してください</p>
       
       <div style="display: flex; justify-content: center; margin: 20px 0;">
-        <div class="cf-turnstile" data-sitekey="0x4AAAAAAEFtAED2UAulk94o" data-callback="onTurnstileSuccess"></div>
+        <div id="turnstile-container" class="cf-turnstile" data-sitekey="0x4AAAAAAEFtAED2UAulk94o" data-callback="onTurnstileSuccess"></div>
       </div>
       <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
       <div id="err-step2" class="error-text"></div>
@@ -256,7 +255,7 @@
     let authCode = "";
     let checkInterval = null;
     let timerInterval = null;
-    let timeRemaining = 300; // 5分 (300秒)
+    let timeRemaining = 300;
     let currentMessageCount = null;
     let isWaitingForComment = false;
 
@@ -348,12 +347,21 @@
     /* ========================================================
        📱 メインアプリケーション処理
        ======================================================== */
-    // 絶対に被らないユニークコード生成 (タイムスタンプ + ランダム文字列)
     function generateUniqueCode() {
-      const timePart = Date.now().toString(36).slice(-3).toUpperCase();
+      const timePart = Date.now().toString(36).slice(-4).toUpperCase();
       const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
       authCode = `VERIFY-${timePart}${randPart}`;
       return authCode;
+    }
+
+    function resetTurnstile() {
+      if (window.turnstile) {
+        try {
+          window.turnstile.reset("#turnstile-container");
+        } catch (e) {
+          console.log("Turnstile reset failed:", e);
+        }
+      }
     }
 
     function startVerification() {
@@ -369,10 +377,13 @@
 
       showError("err-step1", "");
       targetUsername = input;
+      
+      // Step2進出時にTurnstileを安全に再セット
+      resetTurnstile();
       showStep(2);
     }
 
-    // Cloudflare Turnstile成功時に自動かつ確実に次へ進む
+    // Turnstile認証完了イベント
     function onTurnstileSuccess(token) {
       if (!token) return;
       generateUniqueCode();
@@ -382,7 +393,7 @@
         showStep(3);
         startTimer();
         startCommentPolling();
-      }, 500);
+      }, 300);
     }
 
     function copyAuthCode() {
@@ -397,7 +408,6 @@
       window.open(`https://scratch.mit.edu/projects/${PROJECT_ID}/`, "_blank");
     }
 
-    // 5分制限タイマー
     function startTimer() {
       if (timerInterval) clearInterval(timerInterval);
       timeRemaining = 300;
@@ -428,31 +438,40 @@
 
       checkInterval = setInterval(async () => {
         try {
-          const apiUrl = `https://api.scratch.mit.edu/projects/${PROJECT_ID}/comments?limit=20&offset=0`;
-          const res = await fetch(CORS_PROXY + encodeURIComponent(apiUrl));
+          const targetApiUrl = `https://api.scratch.mit.edu/projects/${PROJECT_ID}/comments?limit=20&offset=0`;
+          const res = await fetch(CORS_PROXY + encodeURIComponent(targetApiUrl));
           if (!res.ok) return;
           
-          const comments = await res.json();
-          const matchedComment = comments.find(c => c.content && c.content.includes(authCode));
+          const rawText = await res.text();
+          let comments;
+          try {
+            comments = JSON.parse(rawText);
+          } catch (e) {
+            return;
+          }
 
-          if (matchedComment) {
-            clearInterval(checkInterval);
-            if (timerInterval) clearInterval(timerInterval);
-            isWaitingForComment = false;
-            const commenter = matchedComment.author.username;
+          if (Array.isArray(comments)) {
+            const matchedComment = comments.find(c => c.content && c.content.includes(authCode));
 
-            if (commenter.toLowerCase() === targetUsername.toLowerCase()) {
-              localStorage.setItem("scratch_user", targetUsername);
-              initDashboard();
-            } else {
-              alert(`入力されたユーザー名 (${targetUsername}) と投稿者 (${commenter}) が一致しません。`);
-              cancelVerification();
+            if (matchedComment) {
+              clearInterval(checkInterval);
+              if (timerInterval) clearInterval(timerInterval);
+              isWaitingForComment = false;
+              const commenter = matchedComment.author.username;
+
+              if (commenter.toLowerCase() === targetUsername.toLowerCase()) {
+                localStorage.setItem("scratch_user", targetUsername);
+                initDashboard();
+              } else {
+                alert(`入力されたユーザー名 (${targetUsername}) と投稿者 (${commenter}) が一致しません。`);
+                cancelVerification();
+              }
             }
           }
         } catch (err) {
           console.error("コメント取得エラー:", err);
         }
-      }, 4000);
+      }, 3000);
     }
 
     function cancelVerification() {
@@ -461,6 +480,7 @@
       isWaitingForComment = false;
       targetUsername = "";
       usernameInput.value = "";
+      resetTurnstile();
       showStep(1);
     }
 
@@ -474,11 +494,12 @@
 
     async function updateMessageCount() {
       try {
-        const apiUrl = `https://api.scratch.mit.edu/users/${targetUsername}/messages/count`;
-        const res = await fetch(CORS_PROXY + encodeURIComponent(apiUrl));
+        const targetApiUrl = `https://api.scratch.mit.edu/users/${targetUsername}/messages/count`;
+        const res = await fetch(CORS_PROXY + encodeURIComponent(targetApiUrl));
         
         if (res.ok) {
-          const data = await res.json();
+          const rawText = await res.text();
+          const data = JSON.parse(rawText);
           const count = data.count;
 
           if (currentMessageCount !== null && count > currentMessageCount) {
@@ -539,6 +560,7 @@
       currentMessageCount = null;
       targetUsername = "";
       usernameInput.value = "";
+      resetTurnstile();
       showStep(1);
     }
   </script>
