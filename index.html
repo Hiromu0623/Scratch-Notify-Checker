@@ -33,15 +33,17 @@
       background-color: var(--bg-color);
       color: var(--text-color);
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
+      justify-content: center;
       min-height: 100vh;
       margin: 0;
       padding: 20px;
       user-select: none;
+      box-sizing: border-box;
     }
 
-    /* 全体コンテナとアニメーション */
+    /* 全体コンテナ */
     .container {
       background: var(--card-bg);
       border-radius: 16px;
@@ -52,7 +54,6 @@
       box-sizing: border-box;
       text-align: center;
       position: relative;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
     /* 画面切り替えフェードインアニメーション */
@@ -65,14 +66,8 @@
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(12px) scale(0.98);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     h1, h2 { margin-top: 0; }
@@ -123,7 +118,6 @@
       background: #EDF2F7; padding: 12px; border-radius: 8px; font-size: 20px;
       font-weight: bold; letter-spacing: 2px; text-align: center;
       user-select: all; border: 2px dashed #CBD5E0;
-      transition: background-color 0.2s;
     }
     .btn-copy { width: auto; padding: 12px 16px; margin-bottom: 0; }
 
@@ -171,13 +165,32 @@
       background: linear-gradient(135deg, var(--scratch-orange), #FF8C00);
       color: white; text-align: center; border-radius: 12px; padding: 24px; margin-bottom: 24px;
       box-shadow: 0 8px 16px rgba(255, 171, 25, 0.3);
-      transition: transform 0.3s;
     }
-    .msg-count-card:hover { transform: scale(1.02); }
     .msg-number { font-size: 64px; font-weight: 800; line-height: 1; margin: 8px 0; }
     .settings-group { border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 16px; text-align: left; }
     .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
+
+    /* システムログパネル */
+    .log-panel {
+      width: 100%;
+      max-width: 480px;
+      margin-top: 20px;
+      background: #1A202C;
+      color: #00FF66;
+      font-family: monospace;
+      font-size: 12px;
+      border-radius: 10px;
+      padding: 12px;
+      box-sizing: border-box;
+      height: 140px;
+      overflow-y: auto;
+      text-align: left;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .log-entry { margin-bottom: 4px; word-break: break-all; }
+    .log-entry.err { color: #FF6565; }
+    .log-entry.info { color: #63B3ED; }
 
     /* 右クリックメニュー */
     #custom-context-menu {
@@ -191,14 +204,12 @@
       padding: 8px 0;
       min-width: 160px;
       text-align: left;
-      animation: popIn 0.15s ease forwards;
     }
     #custom-context-menu div {
       padding: 8px 16px;
       font-size: 14px;
       color: var(--text-color);
       cursor: pointer;
-      transition: background 0.15s;
     }
     #custom-context-menu div:hover {
       background-color: #F7FAFC;
@@ -298,9 +309,13 @@
     </div>
   </div>
 
+  <!-- 下部リアルタイムログモニター -->
+  <div class="log-panel" id="sys-log">
+    <div class="log-entry info">[SYSTEM] ログモニターが起動しました。</div>
+  </div>
+
   <script>
     const PROJECT_ID = "1366392592";
-    // キャッシュ回避対応の信頼性の高いプロキシを使用
     const CORS_PROXY = "https://corsproxy.io/?";
 
     let targetUsername = "";
@@ -311,11 +326,24 @@
     let currentMessageCount = null;
     let isWaitingForComment = false;
 
-    // 初期起動時のログイン状態チェック
+    // ログ書き込み関数
+    function log(msg, type = "normal") {
+      const logBox = document.getElementById("sys-log");
+      const entry = document.createElement("div");
+      const timeStr = new Date().toLocaleTimeString();
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${timeStr}] ${msg}`;
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // 初期起動チェック
     window.addEventListener("DOMContentLoaded", () => {
+      log("アプリケーションの準備が完了しました。");
       const savedUser = localStorage.getItem("scratch_user");
       if (savedUser) {
         targetUsername = savedUser;
+        log(`保存されたユーザー情報を検出: ${savedUser}`, "info");
         initDashboard();
       }
     });
@@ -336,7 +364,7 @@
     });
 
     /* ========================================================
-       🔒 F12対策 & 動的右クリックメニュー
+       🔒 F12対策 & 右クリックメニュー
        ======================================================== */
     window.addEventListener("keydown", function (e) {
       if (
@@ -345,6 +373,7 @@
         (e.ctrlKey && e.keyCode === 85)
       ) {
         e.preventDefault();
+        log("DevToolsアクセスキーが検出されました。", "err");
         alert("セキュリティ上の理由により制限されています。");
         location.reload();
       }
@@ -403,6 +432,7 @@
       const timePart = Date.now().toString(36).slice(-4).toUpperCase();
       const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
       authCode = `VERIFY-${timePart}${randPart}`;
+      log(`一意の認証コードを生成: ${authCode}`, "info");
       return authCode;
     }
 
@@ -410,8 +440,9 @@
       if (window.turnstile) {
         try {
           window.turnstile.reset("#turnstile-container");
+          log("Turnstileセキュリティ認証をリセットしました。");
         } catch (e) {
-          console.log("Turnstile reset failed:", e);
+          log(`Turnstileリセット例外: ${e}`, "err");
         }
       }
     }
@@ -429,6 +460,7 @@
 
       showError("err-step1", "");
       targetUsername = input;
+      log(`対象ユーザー名セット: ${targetUsername}`);
       
       resetTurnstile();
       showStep(2);
@@ -436,6 +468,7 @@
 
     function onTurnstileSuccess(token) {
       if (!token) return;
+      log("Cloudflare Turnstile セキュリティ認証成功", "info");
       generateUniqueCode();
       document.getElementById("auth-code-display").textContent = authCode;
       
@@ -448,6 +481,7 @@
 
     function copyAuthCode() {
       navigator.clipboard.writeText(authCode).then(() => {
+        log("認証コードをクリップボードにコピーしました。");
         const toast = document.getElementById("copy-toast");
         toast.style.display = "block";
         setTimeout(() => { toast.style.display = "none"; }, 3000);
@@ -455,6 +489,7 @@
     }
 
     function openScratchProject() {
+      log(`Scratchプロジェクトを開きます: ID ${PROJECT_ID}`);
       window.open(`https://scratch.mit.edu/projects/${PROJECT_ID}/`, "_blank");
     }
 
@@ -469,6 +504,7 @@
 
         if (timeRemaining <= 0) {
           clearInterval(timerInterval);
+          log("制限時間（5分）が経過したためタイムアウトしました。", "err");
           alert("⏰ 認証の制限時間（5分）が切れました。最初からやり直してください。");
           cancelVerification();
         }
@@ -482,44 +518,57 @@
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
-    /* リアルタイムで高速かつ正確にコメントをチェックするロジック */
+    /* リアルタイムでコメントを監視するロジック（ログ機能拡張） */
     function startCommentPolling() {
       if (checkInterval) clearInterval(checkInterval);
       isWaitingForComment = true;
+      log("コメント投稿のリアルタイム監視を開始しました...", "info");
 
       checkInterval = setInterval(async () => {
         try {
-          // キャッシュを防ぐためのタイムスタンプパラメータを付与
           const targetUrl = `https://api.scratch.mit.edu/projects/${PROJECT_ID}/comments?limit=20&offset=0&_=${Date.now()}`;
+          log(`コメントを取得中...`);
+          
           const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
           
-          if (!res.ok) return;
+          if (!res.ok) {
+            log(`APIリクエスト失敗 HTTPステータス: ${res.status}`, "err");
+            return;
+          }
           
           const comments = await res.json();
 
           if (Array.isArray(comments)) {
-            // 指定した一意の検証コードを含むコメントを抽出
+            log(`コメント取得成功 (${comments.length}件の最新コメント)`);
             const matchedComment = comments.find(c => c.content && c.content.includes(authCode));
 
             if (matchedComment) {
+              const commenter = matchedComment.author.username;
+              log(`一致するコードを発見! 投稿者: ${commenter}`, "info");
+
               clearInterval(checkInterval);
               if (timerInterval) clearInterval(timerInterval);
               isWaitingForComment = false;
-              const commenter = matchedComment.author.username;
 
               if (commenter.toLowerCase() === targetUsername.toLowerCase()) {
+                log("ユーザー名が一致しました。認証完了！", "info");
                 localStorage.setItem("scratch_user", targetUsername);
                 initDashboard();
               } else {
+                log(`ユーザー不一致エラー: 入力=${targetUsername}, 投稿=${commenter}`, "err");
                 alert(`入力されたユーザー名 (${targetUsername}) と投稿者 (${commenter}) が一致しません。`);
                 cancelVerification();
               }
+            } else {
+              log(`コード '${authCode}' を探しています...`);
             }
+          } else {
+            log("取得したコメントデータが配列形式ではありません。", "err");
           }
         } catch (err) {
-          console.error("コメント取得エラー:", err);
+          log(`コメント取得エラー発生: ${err.message}`, "err");
         }
-      }, 2500); // 2.5秒ごとに検知チェック
+      }, 3000);
     }
 
     function cancelVerification() {
@@ -528,6 +577,7 @@
       isWaitingForComment = false;
       targetUsername = "";
       usernameInput.value = "";
+      log("認証をキャンセルし、ホームに戻りました。");
       resetTurnstile();
       showStep(1);
     }
@@ -536,6 +586,7 @@
       isWaitingForComment = false;
       showStep(4);
       document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
+      log(`ダッシュボードを起動: ${targetUsername}`, "info");
       updateMessageCount();
       setInterval(updateMessageCount, 10000);
     }
@@ -548,8 +599,10 @@
         if (res.ok) {
           const data = await res.json();
           const count = data.count;
+          log(`未読通知数更新: ${count} 件`);
 
           if (currentMessageCount !== null && count > currentMessageCount) {
+            log("新着通知を検知！通知音を再生します。", "info");
             playNotificationSound();
           }
 
@@ -557,7 +610,7 @@
           document.getElementById("msg-count").textContent = count;
         }
       } catch (err) {
-        console.error("通知数取得エラー:", err);
+        log(`通知数取得エラー: ${err.message}`, "err");
       }
     }
 
@@ -607,6 +660,7 @@
       currentMessageCount = null;
       targetUsername = "";
       usernameInput.value = "";
+      log("ログアウトしました。");
       resetTurnstile();
       showStep(1);
     }
