@@ -3,597 +3,1033 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scratch通知チェッカー & アカウント管理ポータル</title>
+  <title>Scratch通知数チェッカー</title>
+  
+  <!-- タブ・リンクバー（ファビコン）アイコンの設定 -->
+  <link rel="icon" href="1000006736-500x500.jpg" type="image/jpeg">
+
+  <!-- Cloudflare Turnstile API -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   
   <style>
-    /* ==========================================================================
-       1. Scratch Notification Checker Base Styles
-       ========================================================================== */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    @font-face {
+      font-family: 'UzuraFont';
+      src: url('uzura.ttf') format('truetype');
+    }
+
+    :root {
+      --scratch-orange: #FFAB19;
+      --scratch-blue: #4D97FF;
+      --bg-color: #F0F4F8;
+      --card-bg: #FFFFFF;
+      --text-color: #2D3748;
+      --danger-color: #FF6565;
+      --gray-btn: #A0AEC0;
+      --success-green: #48BB78;
     }
 
     body {
-      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-      background-color: #f0f4f8;
-      color: #2c3e50;
-      line-height: 1.6;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-    }
-
-    /* Scratch Theme Header */
-    header {
-      background: linear-gradient(135deg, #4d97ff 0%, #3373cc 100%);
-      color: #ffffff;
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(77, 151, 255, 0.25);
-      margin-bottom: 20px;
+      font-family: 'UzuraFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    header h1 {
-      font-size: 22px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .scratch-logo-icon {
-      background-color: #ffab19;
-      color: #ffffff;
-      font-weight: bold;
-      padding: 4px 10px;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    .user-status-pill {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      backdrop-filter: blur(4px);
-    }
-
-    /* Inline Alert Banner (Replaces alert()) */
-    .inline-notification-banner {
-      display: none;
-      padding: 14px 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: all 0.3s ease;
-    }
-
-    .inline-notification-banner.success {
-      background-color: #e6fffa;
-      color: #234e52;
-      border: 1px solid #b2f5ea;
-    }
-
-    .inline-notification-banner.error {
-      background-color: #fff5f5;
-      color: #742a2a;
-      border: 1px solid #fed7d7;
-    }
-
-    .inline-notification-banner.info {
-      background-color: #ebf8ff;
-      color: #2c5282;
-      border: 1px solid #bee3f8;
-    }
-
-    .inline-notification-banner.warning {
-      background-color: #fffaf0;
-      color: #7b341e;
-      border: 1px solid #feebc8;
-    }
-
-    /* Cards */
-    .card {
-      background-color: #ffffff;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      border: 1px solid #e2e8f0;
-    }
-
-    .card-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #2d3748;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 2px solid #edf2f7;
-      padding-bottom: 10px;
-    }
-
-    /* Notification Counter Badge */
-    .count-badge {
-      background-color: #ff6680;
-      color: #ffffff;
-      border-radius: 12px;
-      padding: 2px 10px;
-      font-size: 13px;
-      font-weight: bold;
-    }
-
-    /* Forms & Inputs */
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 700;
-      color: #4a5568;
-      margin-bottom: 6px;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 10px 14px;
-      border: 1px solid #cbd5e0;
-      border-radius: 6px;
-      font-size: 14px;
-      transition: border-color 0.2s ease;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: #4d97ff;
-      box-shadow: 0 0 0 3px rgba(77, 151, 255, 0.15);
-    }
-
-    /* Buttons */
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 700;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      user-select: none;
+      box-sizing: border-box;
+      position: relative;
     }
 
-    .btn-scratch {
-      background-color: #4d97ff;
-      color: #ffffff;
-    }
-
-    .btn-scratch:hover {
-      background-color: #3373cc;
-    }
-
-    .btn-secondary {
-      background-color: #edf2f7;
-      color: #4a5568;
-    }
-
-    .btn-secondary:hover {
-      background-color: #e2e8f0;
-      color: #2d3748;
-    }
-
-    .btn-danger {
-      background-color: #ff6680;
-      color: #ffffff;
-    }
-
-    .btn-danger:hover {
-      background-color: #e64d66;
-    }
-
-    .btn-sm {
-      padding: 6px 12px;
-      font-size: 12px;
-    }
-
-    /* User Table */
-    .table-responsive {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-
-    th, td {
-      padding: 12px 16px;
-      border-bottom: 1px solid #e2e8f0;
-      font-size: 14px;
-    }
-
-    th {
-      background-color: #f7fafc;
-      color: #718096;
-      font-weight: 700;
-    }
-
-    .protected-badge {
-      background-color: #ebf8ff;
-      color: #2b6cb0;
-      border: 1px solid #bee3f8;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    .status-banned {
-      background-color: #fff5f5;
-      color: #c53030;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    .status-active {
-      background-color: #f0fff4;
-      color: #276749;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    /* Log Box inside Admin Menu */
-    .admin-log-box {
+    /* 画面上部固定のインライン通知バナー（alert()の代替） */
+    #inline-notification-banner {
       display: none;
-      margin-top: 16px;
-      background-color: #1a202c;
-      color: #a0aec0;
-      padding: 16px;
-      border-radius: 8px;
-      font-family: Consolas, Monaco, monospace;
-      font-size: 12px;
-      max-height: 240px;
-      overflow-y: auto;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30000;
+      width: 90%;
+      max-width: 480px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #inline-notification-banner.success {
+      background-color: var(--success-green);
+      color: #FFFFFF;
+    }
+    #inline-notification-banner.danger {
+      background-color: var(--danger-color);
+      color: #FFFFFF;
+    }
+    #inline-notification-banner.info {
+      background-color: var(--scratch-blue);
+      color: #FFFFFF;
     }
 
-    .admin-log-box.active {
+    /* 読み込み中オーバーレイ */
+    #loading-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(240, 244, 248, 0.95);
+      z-index: 20000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s ease;
+    }
+    .loading-spinner {
+      border: 5px solid #E2E8F0;
+      border-top: 5px solid var(--scratch-blue);
+      border-radius: 50%;
+      width: 50px; height: 50px;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    /* 全体コンテナ */
+    .container {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 480px;
+      padding: 32px;
+      box-sizing: border-box;
+      text-align: center;
+      position: relative;
+    }
+
+    .step-panel { display: none; }
+    .step-panel.active {
       display: block;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    .log-line {
-      padding: 3px 0;
-      border-bottom: 1px solid #2d3748;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    .log-time {
-      color: #4d97ff;
-      margin-right: 8px;
+    h1, h2, h3 { margin-top: 0; }
+
+    input[type="text"], input[type="file"] {
+      width: 100%; padding: 12px 16px; border: 2px solid #E2E8F0;
+      border-radius: 8px; font-size: 16px; box-sizing: border-box; margin-bottom: 16px;
+      font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s;
     }
+    input[type="text"]:focus { 
+      border-color: var(--scratch-blue); outline: none; 
+      box-shadow: 0 0 0 3px rgba(77, 151, 255, 0.2);
+    }
+
+    button {
+      width: 100%; background-color: var(--scratch-blue); color: white;
+      border: none; padding: 14px; border-radius: 8px; font-size: 16px;
+      font-weight: bold; cursor: pointer; font-family: inherit; margin-bottom: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    button:hover { 
+      background-color: #3B82F6; transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(59, 130, 246, 0.25);
+    }
+    button:active { transform: translateY(0) scale(0.98); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+    .btn-cancel { background-color: var(--gray-btn); }
+    .btn-cancel:hover { background-color: #718096; box-shadow: 0 6px 12px rgba(113, 128, 150, 0.25); }
+
+    .code-container { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0; }
+    .code-box {
+      flex: 1; background: #EDF2F7; padding: 12px; border-radius: 8px; font-size: 20px;
+      font-weight: bold; letter-spacing: 2px; text-align: center; user-select: all; border: 2px dashed #CBD5E0;
+    }
+    .btn-copy { width: auto; padding: 12px 16px; margin-bottom: 0; }
+
+    .toast-msg {
+      display: none; background-color: var(--success-green); color: white;
+      padding: 10px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 12px;
+      animation: popIn 0.3s ease forwards;
+    }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+    .timer-badge {
+      font-weight: bold; color: var(--danger-color); font-size: 18px; margin-bottom: 12px;
+      display: inline-block; padding: 4px 12px; background: rgba(255, 101, 101, 0.1); border-radius: 20px;
+    }
+
+    .cf-box {
+      border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px;
+      text-align: center; background: #FAF5FF; margin-bottom: 16px;
+    }
+
+    .spinner {
+      border: 4px solid #E2E8F0; border-top: 4px solid var(--scratch-orange);
+      border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .msg-count-card {
+      background: linear-gradient(135deg, var(--scratch-orange), #FF8C00);
+      color: white; text-align: center; border-radius: 12px; padding: 24px; margin-bottom: 24px;
+      box-shadow: 0 8px 16px rgba(255, 171, 25, 0.3);
+    }
+    .msg-number { font-size: 64px; font-weight: 800; line-height: 1; margin: 8px 0; }
+    .settings-group { border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 16px; text-align: left; }
+    .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
+
+    /* 画面左下固定のログ表示切り替えボタン（Hiromu0623専用） */
+    .log-toggle-btn {
+      display: none; position: fixed; bottom: 20px; left: 20px; width: 48px; height: 48px;
+      border-radius: 50%; background: #2D3748; color: #FFFFFF; font-size: 20px;
+      align-items: center; justify-content: center; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 9999; border: 2px solid #4A5568;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .log-toggle-btn:hover { background-color: #1A202C; transform: scale(1.08); }
+
+    /* 画面右下固定の管理者メニューボタン（Hiromu0623専用） */
+    .admin-toggle-btn {
+      display: none; position: fixed; bottom: 20px; right: 20px; padding: 12px 20px;
+      border-radius: 30px; background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: white;
+      font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.39); z-index: 9999;
+      transition: transform 0.2s;
+    }
+    .admin-toggle-btn:hover { transform: scale(1.05); }
+
+    /* システムログパネル */
+    .log-panel {
+      display: none; width: 100%; max-width: 480px; margin-top: 20px; background: #1A202C;
+      color: #00FF66; font-family: monospace; font-size: 12px; border-radius: 10px; padding: 12px;
+      box-sizing: border-box; height: 140px; overflow-y: auto; text-align: left;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .log-panel.visible { display: block; animation: fadeIn 0.3s ease; }
+    .log-entry { margin-bottom: 4px; word-break: break-all; }
+    .log-entry.err { color: #FF6565; }
+    .log-entry.info { color: #63B3ED; }
+
+    /* 管理者モーダルウィンドウ */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;
+      padding: 20px; box-sizing: border-box;
+    }
+    .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
+    .modal-content {
+      background: white; border-radius: 16px; width: 100%; max-width: 520px; max-height: 85vh;
+      overflow-y: auto; padding: 24px; box-sizing: border-box; position: relative; text-align: left;
+    }
+    .modal-close-btn {
+      position: absolute; top: 16px; right: 16px; background: none; border: none;
+      font-size: 24px; cursor: pointer; color: #A0AEC0; width: auto; padding: 0; box-shadow: none;
+    }
+    .modal-close-btn:hover { color: var(--text-color); background: none; transform: none; }
+
+    .admin-menu-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+    .admin-subpanel { display: none; margin-top: 16px; border-top: 2px solid #EDF2F7; padding-top: 16px; }
+    .admin-subpanel.active { display: block; }
+
+    .user-list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px; background: #F7FAFC; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;
+    }
+    .user-actions { display: flex; gap: 6px; align-items: center; }
+    .user-actions button { width: auto; padding: 6px 10px; font-size: 12px; margin: 0; }
+
+    /* 管理者保護バッジ */
+    .protected-badge {
+      font-size: 11px;
+      font-weight: bold;
+      color: #3182CE;
+      background: #EBF8FF;
+      border: 1px solid #BEE3F8;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    /* グラフ描画エリア */
+    .chart-container {
+      display: flex; align-items: flex-end; justify-content: space-around;
+      height: 160px; border-bottom: 2px solid #CBD5E0; padding-top: 20px; margin: 20px 0;
+    }
+    .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+    .chart-bar { width: 60%; background: var(--scratch-blue); border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; }
+    .chart-label { font-size: 10px; color: #718096; margin-top: 6px; }
+    .chart-value { font-size: 11px; font-weight: bold; margin-bottom: 4px; }
+
+    /* 右クリックメニュー */
+    #custom-context-menu {
+      display: none; position: absolute; z-index: 10000; background: #FFFFFF;
+      border: 1px solid #E2E8F0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 8px 0; min-width: 160px; text-align: left;
+    }
+    #custom-context-menu div { padding: 8px 16px; font-size: 14px; color: var(--text-color); cursor: pointer; }
+    #custom-context-menu div:hover { background-color: #F7FAFC; color: var(--scratch-blue); }
   </style>
 </head>
 <body>
 
+  <!-- 画面上部インライン通知バナー（window.alert()の代替） -->
+  <div id="inline-notification-banner"></div>
+
+  <!-- サイト読み込み中画面 -->
+  <div id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div style="font-weight: bold; color: #4A5568;">読み込み中...</div>
+  </div>
+
+  <!-- カスタム右クリックメニュー -->
+  <div id="custom-context-menu"></div>
+
+  <!-- 左下 ログ表示切替ボタン (Hiromu0623専用) -->
+  <div class="log-toggle-btn" id="log-toggle-btn" onclick="toggleLogPanel()" title="ログの表示/非表示">📜</div>
+
+  <!-- 右下 管理者ボタン (Hiromu0623専用) -->
+  <div class="admin-toggle-btn" id="admin-btn" onclick="openAdminModal()">⚙️ 管理者メニュー</div>
+
   <div class="container">
 
-    <!-- Header Section -->
-    <header>
-      <h1>
-        <span class="scratch-logo-icon">Scratch</span>
-        通知チェッカー & セッションポータル
-      </h1>
-      <div class="user-status-pill" id="headerUserDisplay">
-        ユーザー: Hiromu0623
-      </div>
-    </header>
-
-    <!-- Inline Alert Banner (Replaces alert) -->
-    <div id="notificationBanner" class="inline-notification-banner"></div>
-
-    <!-- Scratch Auth & Session Module -->
-    <div class="card">
-      <div class="card-title">
-        Scratchアカウント認証 & セッション接続
-        <span class="count-badge" id="unreadCountDisplay">未読: 0件</span>
-      </div>
-      <p style="font-size: 13px; color: #718096; margin-bottom: 14px;">
-        Scratchアカウントのユーザー名またはセッションキーを入力して認証を完了してください。
-      </p>
-
-      <div class="form-group">
-        <label for="scratchUsernameInput">Scratch ユーザー名</label>
-        <input type="text" id="scratchUsernameInput" class="form-control" value="Hiromu0623" placeholder="ユーザー名を入力">
-      </div>
-
-      <div class="form-group">
-        <label for="scratchSessionKeyInput">セッション認証キー (API Key)</label>
-        <input type="password" id="scratchSessionKeyInput" class="form-control" value="SCRATCH_SESSION_HIROMU_2026" placeholder="Session Key">
-      </div>
-
-      <div class="btn-group">
-        <button id="btnExecuteAuth" class="btn btn-scratch">認証実行</button>
-        <button id="btnFetchNotifications" class="btn btn-secondary">通知を再手動取得</button>
-      </div>
+    <!-- Step 1: ホーム画面 -->
+    <div id="step-1" class="step-panel active">
+      <h1>Scratch Notification</h1>
+      <p style="color:#718096;">Scratchユーザー名を入力してください</p>
+      <input 
+        type="text" 
+        id="username-input" 
+        placeholder="例: Hiromu0623" 
+        maxlength="20"
+        autocomplete="off"
+      />
+      <button id="btn-step1" onclick="startVerification()">次へ</button>
+      <div id="err-step1" class="error-text"></div>
     </div>
 
-    <!-- Account List & Block/BAN Protection Module -->
-    <div class="card">
-      <div class="card-title">
-        管理登録アカウント一覧 & BAN制御
+    <!-- Step 2: セキュリティ確認 -->
+    <div id="step-2" class="step-panel">
+      <h2>セキュリティ検証</h2>
+      <p style="font-size:14px; color:#4A5568;">チェックボックスを操作してください</p>
+      
+      <div style="display: flex; justify-content: center; margin: 20px 0;">
+        <div id="turnstile-container" class="cf-turnstile" data-sitekey="0x4AAAAAAEFtAED2UAulk94o" data-callback="onTurnstileSuccess"></div>
       </div>
-      <p style="font-size: 13px; color: #718096; margin-bottom: 14px;">
-        ※最高管理者「Hiromu0623」はシステム保護が有効なため、BAN処理から除外されています。
-      </p>
-
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Scratchユーザー</th>
-              <th>権限</th>
-              <th>ステータス</th>
-              <th>アクション</th>
-            </tr>
-          </thead>
-          <tbody id="userTableBody">
-            <!-- JSでレンダリング -->
-          </tbody>
-        </table>
-      </div>
+      <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
+      <div id="err-step2" class="error-text"></div>
     </div>
 
-    <!-- Admin Menu & Log Viewer Module -->
-    <div class="card">
-      <div class="card-title">
-        管理者メニュー
-      </div>
-      <p style="font-size: 13px; color: #718096; margin-bottom: 14px;">
-        Scratch APIリクエストの通信ログおよびシステムメッセージログを確認できます。
+    <!-- Step 3: プロフィール変更確認 -->
+    <div id="step-3" class="step-panel">
+      <h2>アカウント所有権の確認</h2>
+      <p style="font-size:14px; color:#4A5568; line-height:1.5;">
+        以下のコードをコピーし、ご自身のScratchプロフィールの<strong>「私について」</strong>欄に貼り付けて保存してください。
       </p>
 
-      <div class="btn-group">
-        <button id="btnToggleAdminLog" class="btn btn-secondary">ログを表示</button>
-        <button id="btnClearAdminLog" class="btn btn-secondary btn-sm">ログ画面クリア</button>
+      <div class="timer-badge">有効期限 <span id="timer-display">05:00</span></div>
+
+      <div id="copy-toast" class="toast-msg">✅ コードをクリップボードにコピーしました！</div>
+
+      <div class="code-container">
+        <div class="code-box" id="auth-code-display">------</div>
+        <button class="btn-copy" onclick="copyAuthCode()">📋 コピー</button>
+      </div>
+      
+      <button onclick="openScratchProfile()" style="background-color: var(--scratch-orange); margin-bottom: 16px;">
+        プロフィールを開く
+      </button>
+
+      <div class="cf-box">
+        <div class="spinner"></div>
+        <p style="margin:0; font-size:13px; color:#4A5568;">「私について」の更新を待機しています...</p>
       </div>
 
-      <!-- Log Display Container -->
-      <div id="adminLogArea" class="admin-log-box">
-        <div style="color: #4d97ff; margin-bottom: 6px; border-bottom: 1px solid #2d3748; padding-bottom: 4px;">
-          === Scratch Checker API & System Audit Console ===
+      <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
+      <div id="err-step3" class="error-text"></div>
+    </div>
+
+    <!-- Step 4: 通知ダッシュボード -->
+    <div id="step-4" class="step-panel">
+      <h2 id="welcome-msg">ようこそ!</h2>
+      <div class="msg-count-card">
+        <div>未読通知数</div>
+        <div class="msg-number" id="msg-count">--</div>
+        <div style="font-size:12px; opacity:0.9;">10秒ごとに自動更新中</div>
+      </div>
+
+      <div class="settings-group">
+        <h3 style="margin-top:0;">通知設定</h3>
+        <div class="setting-item">
+          <span>通知音を鳴らす</span>
+          <input type="checkbox" id="audio-toggle" style="width:20px; height:20px;" checked>
         </div>
-        <div id="logMessageList"></div>
-      </div>
-    </div>
 
+        <div style="margin-top: 12px;">
+          <label style="font-size:13px; color:#4A5568; display:block; margin-bottom:4px;">カスタム通知音 (音声ファイル):</label>
+          <input type="file" id="sound-file" accept="audio/*">
+        </div>
+
+        <button onclick="testSound()" style="background-color:#718096; margin-top:8px; padding:8px;">通知音をテスト再生</button>
+      </div>
+
+      <button onclick="logout()" style="background-color: transparent; color: #A0AEC0; margin-top:20px; font-weight:normal; box-shadow:none;">ログアウト</button>
+    </div>
+  </div>
+
+  <!-- 下部リアルタイムログモニター -->
+  <div class="log-panel" id="sys-log">
+    <div class="log-entry info">[SYSTEM] ログモニターが起動しました。</div>
+  </div>
+
+  <!-- 管理者用 モーダル画面 -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="closeAdminModal()">✖</button>
+      <h2>⚙️ 管理者パネル</h2>
+      <p style="font-size:12px; color:#718096; margin-bottom: 12px;">管理者 (Hiromu0623) 専用操作ダッシュボード</p>
+
+      <div class="admin-menu-grid">
+        <button onclick="toggleLogPanel()" style="background-color: #2D3748;">📜 システムログを表示/非表示</button>
+        <button onclick="showAdminSubpanel('sub-users')" style="background-color: #4A5568;">👤 登録されたユーザーを表示</button>
+        <button onclick="showAdminSubpanel('sub-usage')" style="background-color: #4A5568;">📊 サイトの使用回数 (グラフ)</button>
+        <button onclick="showAdminSubpanel('sub-manage')" style="background-color: #4A5568;">🛠️ アカウントの管理</button>
+      </div>
+
+      <!-- サブパネル1: 登録ユーザー表示 -->
+      <div id="sub-users" class="admin-subpanel">
+        <h3>登録済みユーザー一覧</h3>
+        <div id="registered-users-list"></div>
+      </div>
+
+      <!-- サブパネル2: サイト使用回数グラフ -->
+      <div id="sub-usage" class="admin-subpanel">
+        <h3>1日あたりのサイト使用回数 (過去7日間)</h3>
+        <div class="chart-container" id="usage-chart"></div>
+      </div>
+
+      <!-- サブパネル3: アカウント管理 -->
+      <div id="sub-manage" class="admin-subpanel">
+        <h3>アカウント管理</h3>
+        <div id="account-manage-list"></div>
+      </div>
+
+      <button onclick="closeAdminModal()" class="btn-cancel" style="margin-top: 20px;">閉じる</button>
+    </div>
   </div>
 
   <script>
-    /* ==========================================================================
-       1. Application State & Account Data
-       ========================================================================== */
-    const scratchAppState = {
-      authenticated: false,
-      currentScratchUser: 'Hiromu0623',
-      unreadNotificationsCount: 3,
-      userAccounts: [
-        { id: 101, username: 'Hiromu0623', role: '最高管理者', isProtected: true, isBanned: false },
-        { id: 102, username: 'Scratch_Dev_User', role: '一般Scratcher', isProtected: false, isBanned: false },
-        { id: 103, username: 'Test_Bot_01', role: 'ボットアカウント', isProtected: false, isBanned: false },
-        { id: 104, username: 'Spam_Account_99', role: '一般', isProtected: false, isBanned: true }
-      ]
-    };
+    const CORS_PROXY = "https://corsproxy.io/?";
+    const ADMIN_USER = "Hiromu0623";
 
-    /* ==========================================================================
-       2. Inline Screen Message System (Replaces window.alert)
-       ========================================================================== */
-    let notificationTimer = null;
+    let targetUsername = "";
+    let authCode = "";
+    let checkInterval = null;
+    let timerInterval = null;
+    let timeRemaining = 300;
+    let currentMessageCount = null;
+    let isWaitingForAuth = false;
 
-    function showInlineMessage(messageText, messageType = 'success', duration = 4000) {
-      const banner = document.getElementById('notificationBanner');
-      banner.textContent = messageText;
-      banner.className = `inline-notification-banner ${messageType}`;
+    /* インライン画面通知システム (window.alert() の代替) */
+    let inlineBannerTimer = null;
+    function showNotificationBanner(msg, type = 'info', duration = 4000) {
+      const banner = document.getElementById('inline-notification-banner');
+      banner.textContent = msg;
+      banner.className = type;
       banner.style.display = 'block';
 
-      // ログコンソールへ記録
-      writeConsoleLog(`[${messageType.toUpperCase()}] ${messageText}`);
-
-      if (notificationTimer) {
-        clearTimeout(notificationTimer);
-      }
-
+      if (inlineBannerTimer) clearTimeout(inlineBannerTimer);
       if (duration > 0) {
-        notificationTimer = setTimeout(() => {
+        inlineBannerTimer = setTimeout(() => {
           banner.style.display = 'none';
         }, duration);
       }
     }
 
-    /* ==========================================================================
-       3. Console Logging System
-       ========================================================================== */
-    function writeConsoleLog(logText) {
-      const logList = document.getElementById('logMessageList');
-      const timeString = new Date().toLocaleTimeString();
-
-      const logRow = document.createElement('div');
-      logRow.className = 'log-line';
-      logRow.innerHTML = `<span class="log-time">[${timeString}]</span> ${escapeHtml(logText)}`;
-
-      logList.prepend(logRow);
+    /* LocalStorage データベース擬似管理 */
+    function getDbData(key, defaultVal) {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : defaultVal;
+    }
+    function setDbData(key, val) {
+      localStorage.setItem(key, JSON.stringify(val));
     }
 
-    function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, function(match) {
-        return {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;'
-        }[match];
+    // ユーザー登録記録
+    function registerUserRecord(username) {
+      let users = getDbData("app_users", []);
+      let existing = users.find(u => u.name.toLowerCase() === username.toLowerCase());
+      if (!existing) {
+        users.push({ name: username, regDate: new Date().toLocaleString(), count: 1 });
+      } else {
+        existing.count = (existing.count || 0) + 1;
+      }
+      setDbData("app_users", users);
+      recordDailyUsage();
+    }
+
+    // 日別アクセス回数記録
+    function recordDailyUsage() {
+      const today = new Date().toISOString().split('T')[0];
+      let usage = getDbData("app_daily_usage", {});
+      usage[today] = (usage[today] || 0) + 1;
+      setDbData("app_daily_usage", usage);
+    }
+
+    // BANチェック
+    function isUserBanned(username) {
+      let bannedList = getDbData("app_banned_users", []);
+      return bannedList.includes(username.toLowerCase());
+    }
+
+    // ログ表示/非表示
+    function toggleLogPanel() {
+      document.getElementById("sys-log").classList.toggle("visible");
+    }
+
+    // ログ書き込み関数
+    function log(msg, type = "normal") {
+      const logBox = document.getElementById("sys-log");
+      const entry = document.createElement("div");
+      const timeStr = new Date().toLocaleTimeString();
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${timeStr}] ${msg}`;
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // 初開時ロード処理
+    window.addEventListener("DOMContentLoaded", () => {
+      log("アプリケーションの初期化を行っています...");
+      
+      // 読み込み完了アニメーション
+      setTimeout(() => {
+        const overlay = document.getElementById("loading-overlay");
+        overlay.style.opacity = "0";
+        setTimeout(() => overlay.style.display = "none", 300);
+      }, 600);
+
+      const savedUser = localStorage.getItem("scratch_user");
+      if (savedUser) {
+        if (isUserBanned(savedUser)) {
+          showNotificationBanner("🚫 このアカウントはアクセスが制限（BAN）されています。", "danger", 5000);
+          localStorage.removeItem("scratch_user");
+          return;
+        }
+        targetUsername = savedUser;
+        log(`保存されたユーザー情報を検出: ${savedUser}`, "info");
+        initDashboard();
+      }
+    });
+
+    /* 入力制限 & Enter */
+    const usernameInput = document.getElementById("username-input");
+    usernameInput.addEventListener("input", function () {
+      this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
+    });
+    usernameInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        startVerification();
+      }
+    });
+
+    /* DevTools 対策 & 右クリックメニュー */
+    window.addEventListener("keydown", function (e) {
+      if (
+        e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || 
+        (e.ctrlKey && e.keyCode === 85)
+      ) {
+        e.preventDefault();
+        log("DevToolsアクセスキーが検出されました。", "err");
+        showNotificationBanner("セキュリティ上の理由により制限されています。", "danger");
+        location.reload();
+      }
+    });
+
+    function detectDevTools() {
+      const threshold = 160;
+      if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+        showNotificationBanner("開発者ツールが検出されました。再読み込みします。", "danger");
+        location.reload();
+      }
+    }
+    window.addEventListener("resize", detectDevTools);
+    setInterval(detectDevTools, 1000);
+
+    const contextMenu = document.getElementById("custom-context-menu");
+    document.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      const selectedText = window.getSelection().toString();
+      let menuHtml = "";
+      if (selectedText.length > 0) {
+        menuHtml += `<div onclick="document.execCommand('copy')">📋 コピー</div>`;
+      }
+      menuHtml += `
+        <div onclick="document.execCommand('selectAll')">🟦 すべてを選択</div>
+        <div onclick="location.reload()">🔄 再読み込み</div>
+      `;
+      contextMenu.innerHTML = menuHtml;
+      contextMenu.style.left = `${e.pageX}px`;
+      contextMenu.style.top = `${e.pageY}px`;
+      contextMenu.style.display = "block";
+    });
+    document.addEventListener("click", () => contextMenu.style.display = "none");
+
+    /* 離脱防止 */
+    window.addEventListener("beforeunload", function (e) {
+      if (isWaitingForAuth) {
+        e.preventDefault();
+        e.returnValue = "コードの認証待機中です。本当にページを離れますか？";
+      }
+    });
+
+    function generateUniqueCode() {
+      const timePart = Date.now().toString(36).slice(-4).toUpperCase();
+      const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+      authCode = `VERIFY-${timePart}${randPart}`;
+      log(`一意の認証コードを生成: ${authCode}`, "info");
+      return authCode;
+    }
+
+    function resetTurnstile() {
+      if (window.turnstile) {
+        try { window.turnstile.reset("#turnstile-container"); } catch (e) {}
+      }
+    }
+
+    function startVerification() {
+      const input = usernameInput.value.trim();
+      if (!input) {
+        showError("err-step1", "ユーザー名を入力してください。");
+        return;
+      }
+      if (input.length < 3 || input.length > 20) {
+        showError("err-step1", "Scratchのユーザー名は3〜20文字です。");
+        return;
+      }
+      if (isUserBanned(input)) {
+        showError("err-step1", "🚫 このアカウントは利用を停止されています（BAN）。");
+        return;
+      }
+
+      showError("err-step1", "");
+      targetUsername = input;
+      log(`対象ユーザー名セット: ${targetUsername}`);
+      resetTurnstile();
+      showStep(2);
+    }
+
+    function onTurnstileSuccess(token) {
+      if (!token || !targetUsername) return;
+      log("Cloudflare Turnstile セキュリティ認証成功", "info");
+      generateUniqueCode();
+      document.getElementById("auth-code-display").textContent = authCode;
+      
+      setTimeout(() => {
+        showStep(3);
+        startTimer();
+        startBioPolling();
+      }, 300);
+    }
+
+    function copyAuthCode() {
+      navigator.clipboard.writeText(authCode).then(() => {
+        log("認証コードをコピーしました。");
+        const toast = document.getElementById("copy-toast");
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 3000);
       });
     }
 
-    /* ==========================================================================
-       4. Scratch Auth Handler
-       ========================================================================== */
-    document.getElementById('btnExecuteAuth').addEventListener('click', function() {
-      const usernameInput = document.getElementById('scratchUsernameInput').value.trim();
-      const sessionKeyInput = document.getElementById('scratchSessionKeyInput').value.trim();
+    function openScratchProfile() {
+      window.open(`https://scratch.mit.edu/users/${targetUsername}/`, "_blank");
+    }
 
-      if (!usernameInput || !sessionKeyInput) {
-        showInlineMessage('ユーザー名またはセッションキーが空です。正しい値を入力してください。', 'warning');
-        return;
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timeRemaining = 300;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          showNotificationBanner("⏰ 認証の制限時間（5分）が切れました。最初からやり直してください。", "danger");
+          cancelVerification();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeRemaining / 60);
+      const seconds = timeRemaining % 60;
+      document.getElementById("timer-display").textContent = 
+        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    // 認証成功音（ファンファーレ調・音量大きめ）
+    function playSuccessSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 1音目: G5 (783.99 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(783.99, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.2);
+
+        // 2音目: C6 (1046.50 Hz) - 華やかな高音
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.15);
+        gain2.gain.setValueAtTime(0.6, ctx.currentTime + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.15);
+        osc2.stop(ctx.currentTime + 0.6);
+      } catch (e) {
+        console.error(e);
       }
+    }
 
-      scratchAppState.authenticated = true;
-      scratchAppState.currentScratchUser = usernameInput;
+    function startBioPolling() {
+      if (checkInterval) clearInterval(checkInterval);
+      isWaitingForAuth = true;
+      log("プロフィールの「私について」監視を開始...", "info");
 
-      // 画面上のヘッダー表示を更新
-      document.getElementById('headerUserDisplay').textContent = `ユーザー: ${usernameInput}`;
+      checkInterval = setInterval(async () => {
+        try {
+          const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}?_=${Date.now()}`;
+          const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
+          if (!res.ok) return;
+          
+          const userData = await res.json();
+          const bioText = userData.profile ? userData.profile.bio : "";
 
-      // 「認証完了」メッセージを画面にインライン表示（alertは使わない）
-      showInlineMessage(`Scratchアカウント「${usernameInput}」の認証が完了しました！`, 'success');
-    });
+          if (bioText && bioText.includes(authCode)) {
+            log("認証コードの記述を検出！認証完了！", "info");
+            clearInterval(checkInterval);
+            if (timerInterval) clearInterval(timerInterval);
+            isWaitingForAuth = false;
 
-    document.getElementById('btnFetchNotifications').addEventListener('click', function() {
-      if (!scratchAppState.authenticated) {
-        showInlineMessage('認証が完了していません。先に「認証実行」を行ってください。', 'error');
-        return;
-      }
+            // 認証成功通知音＆画面内インライン通知表示
+            playSuccessSound();
+            showNotificationBanner("🎉 認証が完了しました！", "success", 5000);
 
-      // 仮想的に通知件数を更新
-      scratchAppState.unreadNotificationsCount = Math.floor(Math.random() * 8) + 1;
-      document.getElementById('unreadCountDisplay').textContent = `未読: ${scratchAppState.unreadNotificationsCount}件`;
-
-      showInlineMessage(`Scratch APIから最新の通知を ${scratchAppState.unreadNotificationsCount} 件取得しました。`, 'info');
-    });
-
-    /* ==========================================================================
-       5. User Table Rendering & Hiromu0623 BAN Protection
-       ========================================================================== */
-    function renderUserAccounts() {
-      const tbody = document.getElementById('userTableBody');
-      tbody.innerHTML = '';
-
-      scratchAppState.userAccounts.forEach(function(account) {
-        const tr = document.createElement('tr');
-
-        // Status Tag
-        const statusHtml = account.isBanned
-          ? `<span class="status-banned">BAN済み</span>`
-          : `<span class="status-active">正常</span>`;
-
-        // Action Buttons (Hiromu0623 Protection)
-        let actionCellHtml = '';
-
-        if (account.username === 'Hiromu0623' || account.isProtected) {
-          // Hiromu0623にはBANボタンを表示しない（保護表示）
-          actionCellHtml = `<span class="protected-badge">管理者 (保護対象)</span>`;
-        } else {
-          if (account.isBanned) {
-            actionCellHtml = `<button class="btn btn-secondary btn-sm" onclick="executeUnbanAccount(${account.id})">BAN解除</button>`;
-          } else {
-            actionCellHtml = `<button class="btn btn-danger btn-sm" onclick="executeBanAccount(${account.id})">BAN実行</button>`;
+            registerUserRecord(targetUsername);
+            localStorage.setItem("scratch_user", targetUsername);
+            initDashboard();
           }
+        } catch (err) {
+          log(`エラー発生: ${err.message}`, "err");
+        }
+      }, 3000);
+    }
+
+    function cancelVerification() {
+      if (checkInterval) clearInterval(checkInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      isWaitingForAuth = false;
+      targetUsername = "";
+      usernameInput.value = "";
+      resetTurnstile();
+      showStep(1);
+    }
+
+    function initDashboard() {
+      isWaitingForAuth = false;
+      showStep(4);
+      document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
+      log(`ダッシュボード表示: ${targetUsername}`, "info");
+
+      // 管理者（Hiromu0623）判定で管理者ボタン & ログボタンを表示
+      const adminBtn = document.getElementById("admin-btn");
+      const logBtn = document.getElementById("log-toggle-btn");
+      
+      if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
+        adminBtn.style.display = "block";
+        logBtn.style.display = "flex";
+        log("管理者アカウント（Hiromu0623）を認証。管理者機能およびログボタンを有効化しました。", "info");
+      } else {
+        adminBtn.style.display = "none";
+        logBtn.style.display = "none";
+        document.getElementById("sys-log").classList.remove("visible");
+      }
+
+      updateMessageCount();
+      setInterval(updateMessageCount, 10000);
+    }
+
+    async function updateMessageCount() {
+      // BANチェック（リアルタイム対応）
+      if (isUserBanned(targetUsername)) {
+        showNotificationBanner("🚫 このアカウントは管理者によりBANされました。", "danger", 5000);
+        logout();
+        return;
+      }
+
+      try {
+        const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}/messages/count?_=${Date.now()}`;
+        const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          const count = data.count;
+          log(`未読通知数更新: ${count} 件`);
+
+          if (currentMessageCount !== null && count > currentMessageCount) {
+            playNotificationSound();
+          }
+          currentMessageCount = count;
+          document.getElementById("msg-count").textContent = count;
+        }
+      } catch (err) {
+        log(`通知数取得エラー: ${err.message}`, "err");
+      }
+    }
+
+    // 通知数増加の通知音（音量大きめに調整）
+    function playNotificationSound() {
+      if (!document.getElementById("audio-toggle").checked) return;
+      const fileInput = document.getElementById("sound-file");
+      
+      if (fileInput.files && fileInput.files[0]) {
+        const url = URL.createObjectURL(fileInput.files[0]);
+        const audio = new Audio(url);
+        audio.volume = 1.0;
+        audio.play();
+      } else {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+        
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      }
+    }
+
+    function testSound() { playNotificationSound(); }
+
+    function showStep(stepNum) {
+      document.querySelectorAll(".step-panel").forEach(panel => panel.classList.remove("active"));
+      document.getElementById(`step-${stepNum}`).classList.add("active");
+    }
+
+    function showError(elementId, msg) {
+      document.getElementById(elementId).textContent = msg;
+    }
+
+    function logout() {
+      if (checkInterval) clearInterval(checkInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      localStorage.removeItem("scratch_user");
+      currentMessageCount = null;
+      targetUsername = "";
+      usernameInput.value = "";
+      
+      // 管理者要素を隠す
+      document.getElementById("admin-btn").style.display = "none";
+      document.getElementById("log-toggle-btn").style.display = "none";
+      document.getElementById("sys-log").classList.remove("visible");
+
+      resetTurnstile();
+      showStep(1);
+    }
+
+    /* ========================================================
+       ⚙️ 管理者パネル機能 (Hiromu0623 専用)
+       ======================================================== */
+    function openAdminModal() {
+      document.getElementById("admin-modal").classList.add("active");
+      log("管理者モーダルを開きました。");
+    }
+
+    function closeAdminModal() {
+      document.getElementById("admin-modal").classList.remove("active");
+    }
+
+    function showAdminSubpanel(panelId) {
+      document.querySelectorAll(".admin-subpanel").forEach(p => p.classList.remove("active"));
+      document.getElementById(panelId).classList.add("active");
+
+      if (panelId === 'sub-users') renderRegisteredUsers();
+      if (panelId === 'sub-usage') renderUsageChart();
+      if (panelId === 'sub-manage') renderAccountManagement();
+    }
+
+    // 1. 登録済みユーザー一覧の描画
+    function renderRegisteredUsers() {
+      const container = document.getElementById("registered-users-list");
+      const users = getDbData("app_users", []);
+      if (users.length === 0) {
+        container.innerHTML = "<p style='font-size:13px; color:#718096;'>登録されているユーザーはいません。</p>";
+        return;
+      }
+      container.innerHTML = users.map(u => `
+        <div class="user-list-item">
+          <div>
+            <strong>${u.name}</strong>
+            <div style="font-size:10px; color:#718096;">登録日時: ${u.regDate || '不明'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 2. サイト使用回数グラフの描画
+    function renderUsageChart() {
+      const container = document.getElementById("usage-chart");
+      const usage = getDbData("app_daily_usage", {});
+      
+      // 過去7日分の日付を生成
+      const dates = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d.toISOString().split('T')[0]);
+      }
+
+      const values = dates.map(d => usage[d] || 0);
+      const maxVal = Math.max(...values, 5);
+
+      container.innerHTML = dates.map((d, idx) => {
+        const val = values[idx];
+        const heightPercent = Math.round((val / maxVal) * 100);
+        const labelStr = d.slice(5); // MM-DD
+        return `
+          <div class="chart-bar-wrap">
+            <div class="chart-value">${val}</div>
+            <div class="chart-bar" style="height: ${heightPercent}%;"></div>
+            <div class="chart-label">${labelStr}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 3. アカウント管理（ログアウト・BAN・情報参照）の描画（Hiromu0623 BAN除外対応）
+    function renderAccountManagement() {
+      const container = document.getElementById("account-manage-list");
+      const users = getDbData("app_users", []);
+      const bannedList = getDbData("app_banned_users", []);
+
+      if (users.length === 0) {
+        container.innerHTML = "<p style='font-size:13px; color:#718096;'>対象ユーザーがいません。</p>";
+        return;
+      }
+
+      container.innerHTML = users.map(u => {
+        const isBanned = bannedList.includes(u.name.toLowerCase());
+        const isAdminHiromu = (u.name.toLowerCase() === ADMIN_USER.toLowerCase());
+
+        // Hiromu0623 の場合はBANボタンを出さず保護表示
+        let banButtonHtml = '';
+        if (isAdminHiromu) {
+          banButtonHtml = `<span class="protected-badge">[管理者保護]</span>`;
+        } else {
+          banButtonHtml = `
+            <button onclick="adminToggleBan('${u.name}')" style="background:${isBanned ? '#48BB78' : '#FF6565'};">
+              ${isBanned ? 'BAN解除' : 'BAN'}
+            </button>
+          `;
         }
 
-        tr.innerHTML = `
-          <td>${account.id}</td>
-          <td><strong>${escapeHtml(account.username)}</strong></td>
-          <td>${escapeHtml(account.role)}</td>
-          <td>${statusHtml}</td>
-          <td>${actionCellHtml}</td>
+        return `
+          <div class="user-list-item">
+            <div>
+              <strong>${u.name}</strong> ${isBanned ? '<span style="color:red; font-size:10px;">[BAN中]</span>' : ''}
+            </div>
+            <div class="user-actions">
+              <button onclick="adminLogoutUser('${u.name}')" style="background:#718096;">ログアウト</button>
+              ${banButtonHtml}
+              <button onclick="adminShowUserInfo('${u.name}')" style="background:#4D97FF;">情報</button>
+            </div>
+          </div>
         `;
-
-        tbody.appendChild(tr);
-      });
+      }).join('');
     }
 
-    // BAN Execution Guard
-    window.executeBanAccount = function(accountId) {
-      const targetAccount = scratchAppState.userAccounts.find(acc => acc.id === accountId);
-      if (!targetAccount) return;
+    // 管理者操作: 強制ログアウト
+    function adminLogoutUser(username) {
+      if (username.toLowerCase() === targetUsername.toLowerCase()) {
+        logout();
+        closeAdminModal();
+        showNotificationBanner("自分自身をログアウトさせました。", "info");
+      } else {
+        showNotificationBanner(`${username} をログアウト処理対象に設定しました。`, "info");
+      }
+    }
 
-      // 二重ガード（Hiromu0623はBAN不可）
-      if (targetAccount.username === 'Hiromu0623' || targetAccount.isProtected) {
-        showInlineMessage('エラー: システム管理者「Hiromu0623」をBANすることはできません。', 'error');
+    // 管理者操作: BAN切り替え（Hiromu0623二重ガード付き）
+    function adminToggleBan(username) {
+      if (username.toLowerCase() === ADMIN_USER.toLowerCase()) {
+        showNotificationBanner("🚫 最高管理者（Hiromu0623）をBANすることはできません。", "danger");
         return;
       }
 
-      targetAccount.isBanned = true;
-      renderUserAccounts();
-      showInlineMessage(`アカウント「${targetAccount.username}」をBANに設定しました。`, 'success');
-    };
-
-    // Unban Execution
-    window.executeUnbanAccount = function(accountId) {
-      const targetAccount = scratchAppState.userAccounts.find(acc => acc.id === accountId);
-      if (targetAccount) {
-        targetAccount.isBanned = false;
-        renderUserAccounts();
-        showInlineMessage(`アカウント「${targetAccount.username}」のBANを解除しました。`, 'info');
-      }
-    };
-
-    /* ==========================================================================
-       6. Admin Menu - Log Viewer Controls
-       ========================================================================== */
-    const toggleLogBtn = document.getElementById('btnToggleAdminLog');
-    const adminLogArea = document.getElementById('adminLogArea');
-
-    toggleLogBtn.addEventListener('click', function() {
-      const isVisible = adminLogArea.classList.contains('active');
-
-      if (isVisible) {
-        adminLogArea.classList.remove('active');
-        toggleLogBtn.textContent = 'ログを表示';
+      let banned = getDbData("app_banned_users", []);
+      const lower = username.toLowerCase();
+      
+      if (banned.includes(lower)) {
+        banned = banned.filter(b => b !== lower);
+        showNotificationBanner(`${username} のBANを解除しました。`, "success");
       } else {
-        adminLogArea.classList.add('active');
-        toggleLogBtn.textContent = 'ログを非表示';
-        writeConsoleLog('管理者メニュー: システムログコンソールを展開しました。');
+        banned.push(lower);
+        showNotificationBanner(`${username} をBANしました。`, "danger");
+        if (username.toLowerCase() === targetUsername.toLowerCase()) {
+          logout();
+          closeAdminModal();
+        }
       }
-    });
-
-    document.getElementById('btnClearAdminLog').addEventListener('click', function() {
-      document.getElementById('logMessageList').innerHTML = '';
-      showInlineMessage('ログ表示をクリアしました。', 'info');
-    });
-
-    /* ==========================================================================
-       7. Initialization
-       ========================================================================== */
-    function initializeScratchChecker() {
-      writeConsoleLog('Scratch通知チェッカーモジュールを初期化しました。');
-      renderUserAccounts();
+      setDbData("app_banned_users", banned);
+      renderAccountManagement();
     }
 
-    window.addEventListener('DOMContentLoaded', initializeScratchChecker);
+    // 管理者操作: アカウント情報ダイアログ（画面内バナー化）
+    async function adminShowUserInfo(username) {
+      const users = getDbData("app_users", []);
+      const user = users.find(u => u.name.toLowerCase() === username.toLowerCase());
+      const usageCount = user ? (user.count || 1) : 1;
+
+      let msgCountText = "取得中...";
+      try {
+        const targetUrl = `https://api.scratch.mit.edu/users/${username}/messages/count?_=${Date.now()}`;
+        const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+        if (res.ok) {
+          const data = await res.json();
+          msgCountText = `${data.count} 件`;
+        } else {
+          msgCountText = "取得失敗";
+        }
+      } catch (e) {
+        msgCountText = "エラー";
+      }
+
+      showNotificationBanner(`【ユーザー情報】 ユーザー名: ${username} / 利用回数: ${usageCount}回 / 未読数: ${msgCountText}`, "info", 6000);
+    }
   </script>
 </body>
 </html>
