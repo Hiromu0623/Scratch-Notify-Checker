@@ -157,11 +157,11 @@
     .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
 
-    /* 画面左下固定のログ表示切り替えボタン */
+    /* 画面左下固定のログ表示切り替えボタン（Hiromu0623専用） */
     .log-toggle-btn {
-      position: fixed; bottom: 20px; left: 20px; width: 48px; height: 48px;
+      display: none; position: fixed; bottom: 20px; left: 20px; width: 48px; height: 48px;
       border-radius: 50%; background: #2D3748; color: #FFFFFF; font-size: 20px;
-      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      align-items: center; justify-content: center; cursor: pointer;
       box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 9999; border: 2px solid #4A5568;
       transition: transform 0.2s, background-color 0.2s;
     }
@@ -247,8 +247,8 @@
   <!-- カスタム右クリックメニュー -->
   <div id="custom-context-menu"></div>
 
-  <!-- 左下 ログ表示切替ボタン -->
-  <div class="log-toggle-btn" onclick="toggleLogPanel()" title="ログの表示/非表示">📜</div>
+  <!-- 左下 ログ表示切替ボタン (Hiromu0623専用) -->
+  <div class="log-toggle-btn" id="log-toggle-btn" onclick="toggleLogPanel()" title="ログの表示/非表示">📜</div>
 
   <!-- 右下 管理者ボタン (Hiromu0623専用) -->
   <div class="admin-toggle-btn" id="admin-btn" onclick="openAdminModal()">⚙️ 管理者メニュー</div>
@@ -615,6 +615,39 @@
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
+    // 認証成功音（ファンファーレ調・音量大きめ）
+    function playSuccessSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 1音目: G5 (783.99 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(783.99, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.5, ctx.currentTime); // 音量アップ
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.2);
+
+        // 2音目: C6 (1046.50 Hz) - 華やかな高音
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.15);
+        gain2.gain.setValueAtTime(0.6, ctx.currentTime + 0.15); // 音量アップ
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.15);
+        osc2.stop(ctx.currentTime + 0.6);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     function startBioPolling() {
       if (checkInterval) clearInterval(checkInterval);
       isWaitingForAuth = true;
@@ -634,6 +667,10 @@
             clearInterval(checkInterval);
             if (timerInterval) clearInterval(timerInterval);
             isWaitingForAuth = false;
+
+            // 認証成功通知音＆アラート
+            playSuccessSound();
+            alert("🎉 認証完了！");
 
             registerUserRecord(targetUsername);
             localStorage.setItem("scratch_user", targetUsername);
@@ -661,13 +698,18 @@
       document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
       log(`ダッシュボード表示: ${targetUsername}`, "info");
 
-      // 管理者（Hiromu0623）判定でボタン表示
+      // 管理者（Hiromu0623）判定で管理者ボタン & ログボタンを表示
       const adminBtn = document.getElementById("admin-btn");
+      const logBtn = document.getElementById("log-toggle-btn");
+      
       if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
         adminBtn.style.display = "block";
-        log("管理者アカウント（Hiromu0623）を認証。管理者ボタンを有効化しました。", "info");
+        logBtn.style.display = "flex";
+        log("管理者アカウント（Hiromu0623）を認証。管理者機能およびログボタンを有効化しました。", "info");
       } else {
         adminBtn.style.display = "none";
+        logBtn.style.display = "none";
+        document.getElementById("sys-log").classList.remove("visible");
       }
 
       updateMessageCount();
@@ -701,6 +743,7 @@
       }
     }
 
+    // 通知数増加の通知音（音量大きめに調整）
     function playNotificationSound() {
       if (!document.getElementById("audio-toggle").checked) return;
       const fileInput = document.getElementById("sound-file");
@@ -708,6 +751,7 @@
       if (fileInput.files && fileInput.files[0]) {
         const url = URL.createObjectURL(fileInput.files[0]);
         const audio = new Audio(url);
+        audio.volume = 1.0; // 最大音量
         audio.play();
       } else {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -716,8 +760,11 @@
         osc.type = "sine";
         osc.frequency.setValueAtTime(587.33, ctx.currentTime);
         osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        
+        // 音量を大きく調整 (0.1 -> 0.5)
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
@@ -743,7 +790,12 @@
       currentMessageCount = null;
       targetUsername = "";
       usernameInput.value = "";
+      
+      // 管理者要素を隠す
       document.getElementById("admin-btn").style.display = "none";
+      document.getElementById("log-toggle-btn").style.display = "none";
+      document.getElementById("sys-log").classList.remove("visible");
+
       resetTurnstile();
       showStep(1);
     }
