@@ -197,9 +197,9 @@
       transform: scale(1.08);
     }
 
-    /* システムログパネル（トグル対応） */
+    /* システムログパネル */
     .log-panel {
-      display: none; /* デフォルトは非表示 */
+      display: none;
       width: 100%;
       max-width: 480px;
       margin-top: 20px;
@@ -285,11 +285,11 @@
       <div id="err-step2" class="error-text"></div>
     </div>
 
-    <!-- Step 3: コード投稿確認 -->
+    <!-- Step 3: プロフィール変更確認 -->
     <div id="step-3" class="step-panel">
       <h2>アカウント所有権の確認</h2>
       <p style="font-size:14px; color:#4A5568; line-height:1.5;">
-        以下のコードをコピーし、指定のScratchプロジェクトのコメント欄に投稿してください。
+        以下のコードをコピーし、ご自身のScratchプロフィールの<strong>「私について」</strong>欄に貼り付けて保存してください。
       </p>
 
       <div class="timer-badge">有効期限 <span id="timer-display">05:00</span></div>
@@ -302,13 +302,13 @@
         <button class="btn-copy" onclick="copyAuthCode()">📋 コピー</button>
       </div>
       
-      <button onclick="openScratchProject()" style="background-color: var(--scratch-orange); margin-bottom: 16px;">
-        コードの送信
+      <button onclick="openScratchProfile()" style="background-color: var(--scratch-orange); margin-bottom: 16px;">
+        プロフィールを開く
       </button>
 
       <div class="cf-box">
         <div class="spinner"></div>
-        <p style="margin:0; font-size:13px; color:#4A5568;">コードの送信を待機しています...</p>
+        <p style="margin:0; font-size:13px; color:#4A5568;">「私について」の更新を待機しています...</p>
       </div>
 
       <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
@@ -349,7 +349,6 @@
   </div>
 
   <script>
-    const PROJECT_ID = "1366392592";
     const CORS_PROXY = "https://corsproxy.io/?";
 
     let targetUsername = "";
@@ -358,7 +357,7 @@
     let timerInterval = null;
     let timeRemaining = 300;
     let currentMessageCount = null;
-    let isWaitingForComment = false;
+    let isWaitingForAuth = false;
 
     // ログ表示/非表示の切り替え関数
     function toggleLogPanel() {
@@ -459,9 +458,9 @@
        ⚠️ 離脱防止アラート
        ======================================================== */
     window.addEventListener("beforeunload", function (e) {
-      if (isWaitingForComment) {
+      if (isWaitingForAuth) {
         e.preventDefault();
-        e.returnValue = "コードの送信待機中です。本当にページを離れますか？";
+        e.returnValue = "コードの認証待機中です。本当にページを離れますか？";
       }
     });
 
@@ -487,6 +486,7 @@
       }
     }
 
+    // ユーザー名入力チェックと画面遷移（勝手に次に行く不具合を修正）
     function startVerification() {
       const input = usernameInput.value.trim();
       if (!input) {
@@ -506,8 +506,9 @@
       showStep(2);
     }
 
+    // Turnstile成功時（ユーザー名が確実に入力されている場合のみ処理）
     function onTurnstileSuccess(token) {
-      if (!token) return;
+      if (!token || !targetUsername) return;
       log("Cloudflare Turnstile セキュリティ認証成功", "info");
       generateUniqueCode();
       document.getElementById("auth-code-display").textContent = authCode;
@@ -515,7 +516,7 @@
       setTimeout(() => {
         showStep(3);
         startTimer();
-        startCommentPolling();
+        startBioPolling();
       }, 300);
     }
 
@@ -528,9 +529,9 @@
       });
     }
 
-    function openScratchProject() {
-      log(`Scratchプロジェクトを開きます: ID ${PROJECT_ID}`);
-      window.open(`https://scratch.mit.edu/projects/${PROJECT_ID}/`, "_blank");
+    function openScratchProfile() {
+      log(`Scratchプロフィールを開きます: ${targetUsername}`);
+      window.open(`https://scratch.mit.edu/users/${targetUsername}/`, "_blank");
     }
 
     function startTimer() {
@@ -558,55 +559,43 @@
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
-    /* リアルタイムでコメントを監視するロジック */
-    function startCommentPolling() {
+    /* リアルタイムで「私について」を監視するロジック */
+    function startBioPolling() {
       if (checkInterval) clearInterval(checkInterval);
-      isWaitingForComment = true;
-      log("コメント投稿のリアルタイム監視を開始しました...", "info");
+      isWaitingForAuth = true;
+      log("プロフィールの「私について」監視を開始しました...", "info");
 
       checkInterval = setInterval(async () => {
         try {
-          const targetUrl = `https://api.scratch.mit.edu/projects/${PROJECT_ID}/comments?limit=20&offset=0&_=${Date.now()}`;
-          log(`コメントを取得中...`);
+          const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}?_=${Date.now()}`;
+          log(`ユーザー情報を取得中 (${targetUsername})...`);
           
           const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
           
           if (!res.ok) {
-            log(`APIリクエスト失敗 HTTPステータス: ${res.status}`, "err");
+            log(`APIリクエスト失敗 (ユーザーが存在しない可能性があります) ステータス: ${res.status}`, "err");
             return;
           }
           
-          const comments = await res.json();
+          const userData = await res.json();
+          const bioText = userData.profile ? userData.profile.bio : "";
 
-          if (Array.isArray(comments)) {
-            log(`コメント取得成功 (${comments.length}件の最新コメント)`);
-            const matchedComment = comments.find(c => c.content && c.content.includes(authCode));
+          log(`「私について」を取得完了`);
 
-            if (matchedComment) {
-              const commenter = matchedComment.author.username;
-              log(`一致するコードを発見! 投稿者: ${commenter}`, "info");
+          if (bioText && bioText.includes(authCode)) {
+            log("一致する認証コードを検出しました！認証完了！", "info");
 
-              clearInterval(checkInterval);
-              if (timerInterval) clearInterval(timerInterval);
-              isWaitingForComment = false;
+            clearInterval(checkInterval);
+            if (timerInterval) clearInterval(timerInterval);
+            isWaitingForAuth = false;
 
-              if (commenter.toLowerCase() === targetUsername.toLowerCase()) {
-                log("ユーザー名が一致しました。認証完了！", "info");
-                localStorage.setItem("scratch_user", targetUsername);
-                initDashboard();
-              } else {
-                log(`ユーザー不一致エラー: 入力=${targetUsername}, 投稿=${commenter}`, "err");
-                alert(`入力されたユーザー名 (${targetUsername}) と投稿者 (${commenter}) が一致しません。`);
-                cancelVerification();
-              }
-            } else {
-              log(`コード '${authCode}' を探しています...`);
-            }
+            localStorage.setItem("scratch_user", targetUsername);
+            initDashboard();
           } else {
-            log("取得したコメントデータが配列形式ではありません。", "err");
+            log(`コード '${authCode}' の記述を待機中...`);
           }
         } catch (err) {
-          log(`コメント取得エラー発生: ${err.message}`, "err");
+          log(`プロフィール取得エラー発生: ${err.message}`, "err");
         }
       }, 3000);
     }
@@ -614,7 +603,7 @@
     function cancelVerification() {
       if (checkInterval) clearInterval(checkInterval);
       if (timerInterval) clearInterval(timerInterval);
-      isWaitingForComment = false;
+      isWaitingForAuth = false;
       targetUsername = "";
       usernameInput.value = "";
       log("認証をキャンセルし、ホームに戻りました。");
@@ -623,7 +612,7 @@
     }
 
     function initDashboard() {
-      isWaitingForComment = false;
+      isWaitingForAuth = false;
       showStep(4);
       document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
       log(`ダッシュボードを起動: ${targetUsername}`, "info");
