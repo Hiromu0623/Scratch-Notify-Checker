@@ -41,6 +41,7 @@
       user-select: none;
     }
 
+    /* 全体コンテナとアニメーション */
     .container {
       background: var(--card-bg);
       border-radius: 16px;
@@ -51,29 +52,63 @@
       box-sizing: border-box;
       text-align: center;
       position: relative;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    /* 画面切り替えフェードインアニメーション */
+    .step-panel {
+      display: none;
+    }
+    .step-panel.active {
+      display: block;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     h1, h2 { margin-top: 0; }
-    .step-panel { display: none; }
-    .step-panel.active { display: block; }
 
     input[type="text"], input[type="file"] {
       width: 100%; padding: 12px 16px; border: 2px solid #E2E8F0;
       border-radius: 8px; font-size: 16px; box-sizing: border-box; margin-bottom: 16px;
       font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    input[type="text"]:focus { border-color: var(--scratch-blue); outline: none; }
+    input[type="text"]:focus { 
+      border-color: var(--scratch-blue); 
+      outline: none; 
+      box-shadow: 0 0 0 3px rgba(77, 151, 255, 0.2);
+    }
 
     button {
       width: 100%; background-color: var(--scratch-blue); color: white;
       border: none; padding: 14px; border-radius: 8px; font-size: 16px;
-      font-weight: bold; cursor: pointer; transition: background 0.2s;
+      font-weight: bold; cursor: pointer;
       font-family: inherit; margin-bottom: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
-    button:hover { background-color: #3B82F6; }
+    button:hover { 
+      background-color: #3B82F6; 
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(59, 130, 246, 0.25);
+    }
+    button:active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
     .btn-cancel { background-color: var(--gray-btn); }
-    .btn-cancel:hover { background-color: #718096; }
+    .btn-cancel:hover { background-color: #718096; box-shadow: 0 6px 12px rgba(113, 128, 150, 0.25); }
 
     /* コード表示コンテナ */
     .code-container {
@@ -88,6 +123,7 @@
       background: #EDF2F7; padding: 12px; border-radius: 8px; font-size: 20px;
       font-weight: bold; letter-spacing: 2px; text-align: center;
       user-select: all; border: 2px dashed #CBD5E0;
+      transition: background-color 0.2s;
     }
     .btn-copy { width: auto; padding: 12px 16px; margin-bottom: 0; }
 
@@ -96,10 +132,16 @@
       display: none;
       background-color: var(--success-green);
       color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
+      padding: 10px 16px;
+      border-radius: 8px;
       font-size: 14px;
       margin-bottom: 12px;
+      animation: popIn 0.3s ease forwards;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
     }
 
     /* タイマー表示 */
@@ -108,6 +150,10 @@
       color: var(--danger-color);
       font-size: 18px;
       margin-bottom: 12px;
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(255, 101, 101, 0.1);
+      border-radius: 20px;
     }
 
     .cf-box {
@@ -117,14 +163,17 @@
 
     .spinner {
       border: 4px solid #E2E8F0; border-top: 4px solid var(--scratch-orange);
-      border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin: 0 auto 12px;
+      border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 12px;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     .msg-count-card {
       background: linear-gradient(135deg, var(--scratch-orange), #FF8C00);
       color: white; text-align: center; border-radius: 12px; padding: 24px; margin-bottom: 24px;
+      box-shadow: 0 8px 16px rgba(255, 171, 25, 0.3);
+      transition: transform 0.3s;
     }
+    .msg-count-card:hover { transform: scale(1.02); }
     .msg-number { font-size: 64px; font-weight: 800; line-height: 1; margin: 8px 0; }
     .settings-group { border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 16px; text-align: left; }
     .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -142,12 +191,14 @@
       padding: 8px 0;
       min-width: 160px;
       text-align: left;
+      animation: popIn 0.15s ease forwards;
     }
     #custom-context-menu div {
       padding: 8px 16px;
       font-size: 14px;
       color: var(--text-color);
       cursor: pointer;
+      transition: background 0.15s;
     }
     #custom-context-menu div:hover {
       background-color: #F7FAFC;
@@ -243,13 +294,14 @@
         <button onclick="testSound()" style="background-color:#718096; margin-top:8px; padding:8px;">通知音をテスト再生</button>
       </div>
 
-      <button onclick="logout()" style="background-color: transparent; color: #A0AEC0; margin-top:20px; font-weight:normal;">ログアウト</button>
+      <button onclick="logout()" style="background-color: transparent; color: #A0AEC0; margin-top:20px; font-weight:normal; box-shadow:none;">ログアウト</button>
     </div>
   </div>
 
   <script>
     const PROJECT_ID = "1366392592";
-    const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+    // キャッシュ回避対応の信頼性の高いプロキシを使用
+    const CORS_PROXY = "https://corsproxy.io/?";
 
     let targetUsername = "";
     let authCode = "";
@@ -378,12 +430,10 @@
       showError("err-step1", "");
       targetUsername = input;
       
-      // Step2進出時にTurnstileを安全に再セット
       resetTurnstile();
       showStep(2);
     }
 
-    // Turnstile認証完了イベント
     function onTurnstileSuccess(token) {
       if (!token) return;
       generateUniqueCode();
@@ -432,25 +482,23 @@
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
+    /* リアルタイムで高速かつ正確にコメントをチェックするロジック */
     function startCommentPolling() {
       if (checkInterval) clearInterval(checkInterval);
       isWaitingForComment = true;
 
       checkInterval = setInterval(async () => {
         try {
-          const targetApiUrl = `https://api.scratch.mit.edu/projects/${PROJECT_ID}/comments?limit=20&offset=0`;
-          const res = await fetch(CORS_PROXY + encodeURIComponent(targetApiUrl));
+          // キャッシュを防ぐためのタイムスタンプパラメータを付与
+          const targetUrl = `https://api.scratch.mit.edu/projects/${PROJECT_ID}/comments?limit=20&offset=0&_=${Date.now()}`;
+          const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
+          
           if (!res.ok) return;
           
-          const rawText = await res.text();
-          let comments;
-          try {
-            comments = JSON.parse(rawText);
-          } catch (e) {
-            return;
-          }
+          const comments = await res.json();
 
           if (Array.isArray(comments)) {
+            // 指定した一意の検証コードを含むコメントを抽出
             const matchedComment = comments.find(c => c.content && c.content.includes(authCode));
 
             if (matchedComment) {
@@ -471,7 +519,7 @@
         } catch (err) {
           console.error("コメント取得エラー:", err);
         }
-      }, 3000);
+      }, 2500); // 2.5秒ごとに検知チェック
     }
 
     function cancelVerification() {
@@ -494,12 +542,11 @@
 
     async function updateMessageCount() {
       try {
-        const targetApiUrl = `https://api.scratch.mit.edu/users/${targetUsername}/messages/count`;
-        const res = await fetch(CORS_PROXY + encodeURIComponent(targetApiUrl));
+        const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}/messages/count?_=${Date.now()}`;
+        const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
         
         if (res.ok) {
-          const rawText = await res.text();
-          const data = JSON.parse(rawText);
+          const data = await res.json();
           const count = data.count;
 
           if (currentMessageCount !== null && count > currentMessageCount) {
