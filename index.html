@@ -41,8 +41,10 @@
       padding: 20px;
       user-select: none;
       box-sizing: border-box;
+      position: relative;
     }
 
+    /* 全体コンテナ */
     .container {
       background: var(--card-bg);
       border-radius: 16px;
@@ -55,6 +57,7 @@
       position: relative;
     }
 
+    /* 画面切り替えフェードインアニメーション */
     .step-panel {
       display: none;
     }
@@ -103,6 +106,7 @@
     .btn-cancel { background-color: var(--gray-btn); }
     .btn-cancel:hover { background-color: #718096; box-shadow: 0 6px 12px rgba(113, 128, 150, 0.25); }
 
+    /* コード表示コンテナ */
     .code-container {
       display: flex;
       align-items: center;
@@ -118,6 +122,7 @@
     }
     .btn-copy { width: auto; padding: 12px 16px; margin-bottom: 0; }
 
+    /* インライン通知トースト */
     .toast-msg {
       display: none;
       background-color: var(--success-green);
@@ -134,6 +139,7 @@
       to { opacity: 1; transform: scale(1); }
     }
 
+    /* タイマー表示 */
     .timer-badge {
       font-weight: bold;
       color: var(--danger-color);
@@ -166,7 +172,34 @@
     .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
 
+    /* 画面左下固定のログ表示切り替えボタン */
+    .log-toggle-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #2D3748;
+      color: #FFFFFF;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      z-index: 9999;
+      border: 2px solid #4A5568;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .log-toggle-btn:hover {
+      background-color: #1A202C;
+      transform: scale(1.08);
+    }
+
+    /* システムログパネル（トグル対応） */
     .log-panel {
+      display: none; /* デフォルトは非表示 */
       width: 100%;
       max-width: 480px;
       margin-top: 20px;
@@ -182,10 +215,15 @@
       text-align: left;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
+    .log-panel.visible {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
     .log-entry { margin-bottom: 4px; word-break: break-all; }
     .log-entry.err { color: #FF6565; }
     .log-entry.info { color: #63B3ED; }
 
+    /* 右クリックメニュー */
     #custom-context-menu {
       display: none;
       position: absolute;
@@ -212,7 +250,11 @@
 </head>
 <body>
 
+  <!-- カスタム右クリックメニュー -->
   <div id="custom-context-menu"></div>
+
+  <!-- 左下 ログ表示切替ボタン -->
+  <div class="log-toggle-btn" onclick="toggleLogPanel()" title="ログの表示/非表示">📜</div>
 
   <div class="container">
 
@@ -252,6 +294,7 @@
 
       <div class="timer-badge">有効期限 <span id="timer-display">05:00</span></div>
 
+      <!-- コピー完了通知 -->
       <div id="copy-toast" class="toast-msg">✅ コードをクリップボードにコピーしました！</div>
 
       <div class="code-container">
@@ -264,8 +307,8 @@
       </button>
 
       <div class="cf-box">
-        <div class="spinner" id="status-spinner"></div>
-        <p style="margin:0; font-size:13px; color:#4A5568;" id="status-text">コードの送信を待機しています...</p>
+        <div class="spinner"></div>
+        <p style="margin:0; font-size:13px; color:#4A5568;">コードの送信を待機しています...</p>
       </div>
 
       <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
@@ -300,12 +343,12 @@
     </div>
   </div>
 
+  <!-- 下部リアルタイムログモニター -->
   <div class="log-panel" id="sys-log">
     <div class="log-entry info">[SYSTEM] ログモニターが起動しました。</div>
   </div>
 
   <script>
-    // ここに監視対象のScratchプロジェクトIDを設定（共有済みである必要があります）
     const PROJECT_ID = "1366392592";
     const CORS_PROXY = "https://corsproxy.io/?";
 
@@ -317,6 +360,13 @@
     let currentMessageCount = null;
     let isWaitingForComment = false;
 
+    // ログ表示/非表示の切り替え関数
+    function toggleLogPanel() {
+      const logBox = document.getElementById("sys-log");
+      logBox.classList.toggle("visible");
+    }
+
+    // ログ書き込み関数
     function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
       const entry = document.createElement("div");
@@ -327,6 +377,7 @@
       logBox.scrollTop = logBox.scrollHeight;
     }
 
+    // 初期起動チェック
     window.addEventListener("DOMContentLoaded", () => {
       log("アプリケーションの準備が完了しました。");
       const savedUser = localStorage.getItem("scratch_user");
@@ -337,6 +388,9 @@
       }
     });
 
+    /* ========================================================
+       ⌨️ Enterキー対応 & 入力制限
+       ======================================================== */
     const usernameInput = document.getElementById("username-input");
     usernameInput.addEventListener("input", function () {
       this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -349,6 +403,9 @@
       }
     });
 
+    /* ========================================================
+       🔒 F12対策 & 右クリックメニュー
+       ======================================================== */
     window.addEventListener("keydown", function (e) {
       if (
         e.keyCode === 123 || 
@@ -398,6 +455,9 @@
       contextMenu.style.display = "none";
     });
 
+    /* ========================================================
+       ⚠️ 離脱防止アラート
+       ======================================================== */
     window.addEventListener("beforeunload", function (e) {
       if (isWaitingForComment) {
         e.preventDefault();
@@ -405,6 +465,9 @@
       }
     });
 
+    /* ========================================================
+       📱 メインアプリケーション処理
+       ======================================================== */
     function generateUniqueCode() {
       const timePart = Date.now().toString(36).slice(-4).toUpperCase();
       const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
@@ -495,11 +558,10 @@
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
+    /* リアルタイムでコメントを監視するロジック */
     function startCommentPolling() {
       if (checkInterval) clearInterval(checkInterval);
       isWaitingForComment = true;
-      document.getElementById("status-text").textContent = "コードの送信を待機しています...";
-      document.getElementById("status-text").style.color = "#4A5568";
       log("コメント投稿のリアルタイム監視を開始しました...", "info");
 
       checkInterval = setInterval(async () => {
@@ -511,10 +573,6 @@
           
           if (!res.ok) {
             log(`APIリクエスト失敗 HTTPステータス: ${res.status}`, "err");
-            if (res.status === 404) {
-              document.getElementById("status-text").textContent = "⚠️ プロジェクトが存在しないか非公開です(404)";
-              document.getElementById("status-text").style.color = "var(--danger-color)";
-            }
             return;
           }
           
@@ -522,9 +580,6 @@
 
           if (Array.isArray(comments)) {
             log(`コメント取得成功 (${comments.length}件の最新コメント)`);
-            document.getElementById("status-text").textContent = "コードの送信を待機しています...";
-            document.getElementById("status-text").style.color = "#4A5568";
-
             const matchedComment = comments.find(c => c.content && c.content.includes(authCode));
 
             if (matchedComment) {
@@ -547,6 +602,8 @@
             } else {
               log(`コード '${authCode}' を探しています...`);
             }
+          } else {
+            log("取得したコメントデータが配列形式ではありません。", "err");
           }
         } catch (err) {
           log(`コメント取得エラー発生: ${err.message}`, "err");
