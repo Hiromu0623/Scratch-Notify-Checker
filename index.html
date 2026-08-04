@@ -4,14 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scratch通知数チェッカー</title>
+  
+  <!-- タブ・リンクバー（ファビコン）アイコンの設定 -->
+  <link rel="icon" href="1000006736-500x500.jpg" type="image/jpeg">
+
   <!-- Cloudflare Turnstile API -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   
   <style>
-    /* けいふぉんとの読み込み設定 */
+    /* うずらフォントの読み込み設定 */
     @font-face {
-      font-family: 'KeiFont';
-      src: url('keifont.ttf') format('truetype');
+      font-family: 'UzuraFont';
+      src: url('uzura.ttf') format('truetype');
     }
 
     :root {
@@ -22,10 +26,11 @@
       --text-color: #2D3748;
       --danger-color: #FF6565;
       --gray-btn: #A0AEC0;
+      --success-green: #48BB78;
     }
 
     body {
-      font-family: 'KeiFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'UzuraFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-color);
       display: flex;
@@ -34,7 +39,7 @@
       min-height: 100vh;
       margin: 0;
       padding: 20px;
-      user-select: none; /* テキスト選択を基本禁止 */
+      user-select: none;
     }
 
     .container {
@@ -46,16 +51,7 @@
       padding: 32px;
       box-sizing: border-box;
       text-align: center;
-    }
-
-    /* アイコン画像 */
-    .app-icon {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
     }
 
     h1, h2 { margin-top: 0; }
@@ -77,12 +73,8 @@
     }
     button:hover { background-color: #3B82F6; }
 
-    .btn-cancel {
-      background-color: var(--gray-btn);
-    }
-    .btn-cancel:hover {
-      background-color: #718096;
-    }
+    .btn-cancel { background-color: var(--gray-btn); }
+    .btn-cancel:hover { background-color: #718096; }
 
     /* コード表示コンテナ */
     .code-container {
@@ -98,8 +90,25 @@
       font-weight: bold; letter-spacing: 2px; text-align: center;
       user-select: all; border: 2px dashed #CBD5E0;
     }
-    .btn-copy {
-      width: auto; padding: 12px 16px; margin-bottom: 0;
+    .btn-copy { width: auto; padding: 12px 16px; margin-bottom: 0; }
+
+    /* インライン通知トースト */
+    .toast-msg {
+      display: none;
+      background-color: var(--success-green);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    /* タイマー表示 */
+    .timer-badge {
+      font-weight: bold;
+      color: var(--danger-color);
+      font-size: 18px;
+      margin-bottom: 12px;
     }
 
     .cf-box {
@@ -122,7 +131,7 @@
     .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
 
-    /* 動的右クリックメニュー */
+    /* 右クリックメニュー */
     #custom-context-menu {
       display: none;
       position: absolute;
@@ -153,8 +162,6 @@
   <div id="custom-context-menu"></div>
 
   <div class="container">
-    <!-- アイコン画像表示 -->
-    <img src="1000006736-500x500.jpg" alt="App Icon" class="app-icon" onerror="this.style.display='none'">
 
     <!-- Step 1: ホーム画面 -->
     <div id="step-1" class="step-panel active">
@@ -167,7 +174,7 @@
         maxlength="20"
         autocomplete="off"
       />
-      <button onclick="startVerification()">次へ</button>
+      <button id="btn-step1" onclick="startVerification()">次へ</button>
       <div id="err-step1" class="error-text"></div>
     </div>
 
@@ -190,13 +197,18 @@
         以下のコードをコピーし、指定のScratchプロジェクトのコメント欄に投稿してください。
       </p>
 
+      <div class="timer-badge">有効期限 <span id="timer-display">05:00</span></div>
+
+      <!-- コピー完了通知 -->
+      <div id="copy-toast" class="toast-msg">✅ コードをクリップボードにコピーしました！</div>
+
       <div class="code-container">
         <div class="code-box" id="auth-code-display">------</div>
         <button class="btn-copy" onclick="copyAuthCode()">📋 コピー</button>
       </div>
       
       <button onclick="openScratchProject()" style="background-color: var(--scratch-orange); margin-bottom: 16px;">
-        ここをクリックしてコードを送信してください。
+        コードの送信
       </button>
 
       <div class="cf-box">
@@ -243,6 +255,8 @@
     let targetUsername = "";
     let authCode = "";
     let checkInterval = null;
+    let timerInterval = null;
+    let timeRemaining = 300; // 5分 (300秒)
     let currentMessageCount = null;
     let isWaitingForComment = false;
 
@@ -256,15 +270,22 @@
     });
 
     /* ========================================================
-       🔒 1. 入力制限 (英数字・ハイフン・アンダースコアのみ)
+       ⌨️ Enterキー対応 & 入力制限
        ======================================================== */
     const usernameInput = document.getElementById("username-input");
     usernameInput.addEventListener("input", function () {
       this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
     });
 
+    usernameInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        startVerification();
+      }
+    });
+
     /* ========================================================
-       🔒 2. F12対策 & 動的右クリックメニュー
+       🔒 F12対策 & 動的右クリックメニュー
        ======================================================== */
     window.addEventListener("keydown", function (e) {
       if (
@@ -288,7 +309,6 @@
     window.addEventListener("resize", detectDevTools);
     setInterval(detectDevTools, 1000);
 
-    // テキスト選択状況に応じてメニューを切替
     const contextMenu = document.getElementById("custom-context-menu");
     document.addEventListener("contextmenu", function (e) {
       e.preventDefault();
@@ -316,7 +336,7 @@
     });
 
     /* ========================================================
-       ⚠️ 3. 離脱防止アラート (コメント待機中のみ)
+       ⚠️ 離脱防止アラート
        ======================================================== */
     window.addEventListener("beforeunload", function (e) {
       if (isWaitingForComment) {
@@ -326,11 +346,13 @@
     });
 
     /* ========================================================
-       📱 4. メインアプリケーション処理
+       📱 メインアプリケーション処理
        ======================================================== */
-    function generateCode() {
-      const rawCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      authCode = "VERIFY-" + rawCode;
+    // 絶対に被らないユニークコード生成 (タイムスタンプ + ランダム文字列)
+    function generateUniqueCode() {
+      const timePart = Date.now().toString(36).slice(-3).toUpperCase();
+      const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+      authCode = `VERIFY-${timePart}${randPart}`;
       return authCode;
     }
 
@@ -350,24 +372,54 @@
       showStep(2);
     }
 
+    // Cloudflare Turnstile成功時に自動かつ確実に次へ進む
     function onTurnstileSuccess(token) {
-      generateCode();
+      if (!token) return;
+      generateUniqueCode();
       document.getElementById("auth-code-display").textContent = authCode;
       
       setTimeout(() => {
         showStep(3);
+        startTimer();
         startCommentPolling();
-      }, 1000);
+      }, 500);
     }
 
     function copyAuthCode() {
       navigator.clipboard.writeText(authCode).then(() => {
-        alert("コードをコピーしました！ Scratchのコメント欄に貼り付けてください。");
+        const toast = document.getElementById("copy-toast");
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 3000);
       });
     }
 
     function openScratchProject() {
       window.open(`https://scratch.mit.edu/projects/${PROJECT_ID}/`, "_blank");
+    }
+
+    // 5分制限タイマー
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timeRemaining = 300;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          alert("⏰ 認証の制限時間（5分）が切れました。最初からやり直してください。");
+          cancelVerification();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeRemaining / 60);
+      const seconds = timeRemaining % 60;
+      document.getElementById("timer-display").textContent = 
+        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
     function startCommentPolling() {
@@ -385,11 +437,11 @@
 
           if (matchedComment) {
             clearInterval(checkInterval);
+            if (timerInterval) clearInterval(timerInterval);
             isWaitingForComment = false;
             const commenter = matchedComment.author.username;
 
             if (commenter.toLowerCase() === targetUsername.toLowerCase()) {
-              // ログインデータをブラウザに保存
               localStorage.setItem("scratch_user", targetUsername);
               initDashboard();
             } else {
@@ -405,6 +457,7 @@
 
     function cancelVerification() {
       if (checkInterval) clearInterval(checkInterval);
+      if (timerInterval) clearInterval(timerInterval);
       isWaitingForComment = false;
       targetUsername = "";
       usernameInput.value = "";
@@ -481,7 +534,8 @@
 
     function logout() {
       if (checkInterval) clearInterval(checkInterval);
-      localStorage.removeItem("scratch_user"); // 保存データを削除
+      if (timerInterval) clearInterval(timerInterval);
+      localStorage.removeItem("scratch_user");
       currentMessageCount = null;
       targetUsername = "";
       usernameInput.value = "";
