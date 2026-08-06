@@ -1,0 +1,16 @@
+# 環境変数ファイル（APIキーなどの秘密情報）
+.env
+.env.local
+.env.*.local
+
+# 依存ライブラリ
+node_modules/
+
+# ビルド出力フォルダ
+dist/
+build/
+
+# エディタ・OSの不要ファイル
+.DS_Store
+.vscode/
+.idea/
