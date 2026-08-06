@@ -619,6 +619,7 @@
   measurementId: "G-2799DMKZTY"
 };
 
+
     let db = null;
     try {
       if (window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -640,6 +641,8 @@
     let timeRemaining = 300;
     let currentMessageCount = null;
     let customAudioBlob = null;
+    let customAudioUrl = null;
+    let globalAudioPlayer = null; // 上書き再生用のグローバルAudioインスタンス
     let sessionRef = null;
     let currentStep = 1;
 
@@ -686,6 +689,10 @@
         const tx = dbInstance.transaction("sounds", "readwrite");
         tx.objectStore("sounds").put(file, "customSound");
         customAudioBlob = file;
+        
+        if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
+        customAudioUrl = URL.createObjectURL(file);
+
         updateSoundDetailsUI(file);
         showNotificationBanner("🎵 カスタム通知音を保存しました", "success", 3000);
         log("カスタム通知音を保存: " + file.name, "info");
@@ -700,6 +707,10 @@
         const tx = dbInstance.transaction("sounds", "readwrite");
         tx.objectStore("sounds").delete("customSound");
         customAudioBlob = null;
+        if (customAudioUrl) {
+          URL.revokeObjectURL(customAudioUrl);
+          customAudioUrl = null;
+        }
         updateSoundDetailsUI(null);
         showNotificationBanner("🗑️ カスタム通知音を削除しました（標準音に戻ります）", "info", 3000);
         log("カスタム通知音を削除しました", "info");
@@ -716,6 +727,7 @@
         req.onsuccess = function() {
           if (req.result) {
             customAudioBlob = req.result;
+            customAudioUrl = URL.createObjectURL(customAudioBlob);
             updateSoundDetailsUI(customAudioBlob);
             log("IndexedDBからカスタム通知音を読み込みました", "info");
           }
@@ -891,7 +903,6 @@
       }
     }
 
-    // 修正ポイント：Step 2の画面にいるときだけ進行するようにガード処理を追記
     function onTurnstileSuccess(token) {
       if (!token || !targetUsername) return;
       if (currentStep !== 2) {
@@ -1048,21 +1059,59 @@
       } catch (err) {}
     }
 
+    // 音声を停止・上書き再生する共通関数
+    function playAudioSource(srcUrl) {
+      if (globalAudioPlayer) {
+        globalAudioPlayer.pause();
+        globalAudioPlayer.currentTime = 0;
+      } else {
+        globalAudioPlayer = new Audio();
+      }
+
+      globalAudioPlayer.src = srcUrl;
+      globalAudioPlayer.currentTime = 0;
+      
+      globalAudioPlayer.play().then(function() {
+        log("通知音を再生しました（上書き）", "info");
+      }).catch(function(e) {
+        log("ファイル再生制限または不備のためビープ音を起動します: " + e.message, "info");
+        playBeepSound();
+      });
+    }
+
     function playNotificationSound() {
       if (!document.getElementById("audio-toggle").checked) return;
 
-      if (customAudioBlob) {
-        const url = URL.createObjectURL(customAudioBlob);
-        const audio = new Audio(url);
-        audio.play().catch(function() { playDefaultSound(); });
+      if (customAudioUrl) {
+        playAudioSource(customAudioUrl);
       } else {
         playDefaultSound();
       }
     }
 
     function playDefaultSound() {
-      const audio = new Audio("default-notify.mp3");
-      audio.play().catch(function(e) {});
+      playAudioSource("default-notify.mp3");
+    }
+
+    function playBeepSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch (err) {
+        log("ビープ音再生エラー: " + err.message, "err");
+      }
     }
 
     function testSound() {
@@ -1092,6 +1141,11 @@
       if (timerInterval) clearInterval(timerInterval);
       if (autoUpdateInterval) clearInterval(autoUpdateInterval);
       if (sessionRef) sessionRef.off();
+
+      if (globalAudioPlayer) {
+        globalAudioPlayer.pause();
+        globalAudioPlayer.currentTime = 0;
+      }
 
       localStorage.removeItem("scratch_user");
       currentMessageCount = null;
