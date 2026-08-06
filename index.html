@@ -457,31 +457,6 @@
       padding-top: 20px;
       margin: 20px 0;
     }
-    .chart-bar-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex: 1;
-      height: 100%;
-      justify-content: flex-end;
-    }
-    .chart-bar {
-      width: 60%;
-      background: var(--scratch-blue);
-      border-radius: 4px 4px 0 0;
-      min-height: 4px;
-      transition: height 0.3s;
-    }
-    .chart-label {
-      font-size: 10px;
-      color: #718096;
-      margin-top: 6px;
-    }
-    .chart-value {
-      font-size: 11px;
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
   </style>
 </head>
 <body>
@@ -612,7 +587,6 @@
   </div>
 
   <script>
-    // ★★★ 以下の firebaseConfig の中身を、Firebaseコンソールからコピーした実際の情報に置き換えてください ★★★
     const firebaseConfig = {
   apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
   authDomain: "scratch-notify.firebaseapp.com",
@@ -623,16 +597,15 @@
   appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
   measurementId: "G-2799DMKZTY"
 };
-    };
 
     let db = null;
     try {
-      if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+      if (window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
       }
     } catch (e) {
-      console.warn("FirebaseConfigが未設定のため、LocalStorageモード併用で動きます。");
+      console.warn("Firebase初期化スキップ");
     }
 
     const CORS_PROXY = "https://corsproxy.io/?";
@@ -648,7 +621,6 @@
     let customAudioBlob = null;
     let sessionRef = null;
 
-    // --- IndexedDB 音声保存ロジック (再読み込み時にもカスタム音声を維持) ---
     function openAudioDB() {
       return new Promise(function(resolve, reject) {
         const req = indexedDB.open("SoundStoreDB", 1);
@@ -699,7 +671,6 @@
       }
     }
 
-    // --- バナー通知表示 ---
     function showNotificationBanner(msg, type = 'info', duration = 4000) {
       const banner = document.getElementById('inline-notification-banner');
       banner.textContent = msg;
@@ -718,6 +689,7 @@
 
     function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
+      if (!logBox) return;
       const entry = document.createElement("div");
       const timeStr = new Date().toLocaleTimeString();
       entry.className = "log-entry " + type;
@@ -726,49 +698,61 @@
       logBox.scrollTop = logBox.scrollHeight;
     }
 
-    // --- アプリケーション初期化 ---
+    // --- 初期化処理 (読み込み画面の安全解除を追加) ---
     window.addEventListener("DOMContentLoaded", async function() {
       log("アプリケーションの初期化を行っています...");
-      await loadCustomSound();
 
-      const savedUser = localStorage.getItem("scratch_user");
-      if (savedUser && db) {
-        const userClean = savedUser.toLowerCase();
-        
-        try {
-          const banSnap = await db.ref("banned_users/" + userClean).get();
-          if (banSnap.exists()) {
-            showNotificationBanner("🚫 このアカウントは利用停止（BAN）されています。", "danger", 5000);
-            localStorage.removeItem("scratch_user");
-            hideLoadingOverlay();
-            return;
-          }
+      // 万が一のタイムアウト強制解除 (1.2秒後)
+      const forceHideTimer = setTimeout(hideLoadingOverlay, 1200);
 
-          const sessionSnap = await db.ref("sessions/" + userClean).get();
-          if (sessionSnap.exists() && sessionSnap.val().loggedIn) {
+      try {
+        await loadCustomSound();
+
+        const savedUser = localStorage.getItem("scratch_user");
+        if (savedUser && db) {
+          const userClean = savedUser.toLowerCase();
+          
+          try {
+            const banSnap = await db.ref("banned_users/" + userClean).get();
+            if (banSnap.exists()) {
+              showNotificationBanner("🚫 このアカウントは利用停止（BAN）されています。", "danger", 5000);
+              localStorage.removeItem("scratch_user");
+              clearTimeout(forceHideTimer);
+              hideLoadingOverlay();
+              return;
+            }
+
+            const sessionSnap = await db.ref("sessions/" + userClean).get();
+            if (sessionSnap.exists() && sessionSnap.val().loggedIn) {
+              targetUsername = savedUser;
+              initDashboard();
+            } else {
+              localStorage.removeItem("scratch_user");
+            }
+          } catch (e) {
             targetUsername = savedUser;
             initDashboard();
-          } else {
-            localStorage.removeItem("scratch_user");
           }
-        } catch (e) {
+        } else if (savedUser) {
           targetUsername = savedUser;
           initDashboard();
         }
-      } else if (savedUser) {
-        targetUsername = savedUser;
-        initDashboard();
+      } catch (err) {
+        log("初期化エラー: " + err.message, "err");
+      } finally {
+        clearTimeout(forceHideTimer);
+        hideLoadingOverlay();
       }
-
-      hideLoadingOverlay();
     });
 
     function hideLoadingOverlay() {
       const overlay = document.getElementById("loading-overlay");
-      overlay.style.opacity = "0";
-      setTimeout(function() {
-        overlay.style.display = "none";
-      }, 300);
+      if (overlay) {
+        overlay.style.opacity = "0";
+        setTimeout(function() {
+          overlay.style.display = "none";
+        }, 300);
+      }
     }
 
     const usernameInput = document.getElementById("username-input");
@@ -921,7 +905,6 @@
       showStep(1);
     }
 
-    // --- ダッシュボード初期化 & Realtime 監視 ---
     function initDashboard() {
       showStep(4);
       document.getElementById("welcome-msg").textContent = targetUsername + " の通知状況";
