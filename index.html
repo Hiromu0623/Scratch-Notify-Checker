@@ -222,14 +222,8 @@
       animation: popIn 0.3s ease forwards;
     }
     @keyframes popIn {
-      from {
-        opacity: 0;
-        transform: scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
     }
 
     .timer-badge {
@@ -293,6 +287,17 @@
       align-items: center;
       margin-bottom: 12px;
     }
+
+    .sound-details-box {
+      background: #F7FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #4A5568;
+    }
+
     .error-text {
       color: var(--danger-color);
       font-size: 14px;
@@ -344,12 +349,8 @@
       margin-bottom: 4px;
       word-break: break-all;
     }
-    .log-entry.err {
-      color: #FF6565;
-    }
-    .log-entry.info {
-      color: #63B3ED;
-    }
+    .log-entry.err { color: #FF6565; }
+    .log-entry.info { color: #63B3ED; }
 
     .modal-overlay {
       display: none;
@@ -412,9 +413,7 @@
       border-top: 2px solid #EDF2F7;
       padding-top: 16px;
     }
-    .admin-subpanel.active {
-      display: block;
-    }
+    .admin-subpanel.active { display: block; }
 
     .user-list-item {
       display: flex;
@@ -477,7 +476,7 @@
       <h1>Scratch Notification</h1>
       <p style="color:#718096;">Scratchユーザー名を入力してください</p>
       <input type="text" id="username-input" placeholder="例: Hiromu0623" maxlength="20" autocomplete="off" />
-      <button id="btn-step1" onclick="startVerification()">次へ</button>
+      <button id="btn-step1" onclick="checkUserSessionAndProceed()">次へ</button>
       <div id="err-step1" class="error-text"></div>
     </div>
 
@@ -541,9 +540,15 @@
           <label style="font-size:13px; color:#4A5568; display:block; margin-bottom:4px;">カスタム通知音 (音声ファイル):</label>
           <input type="file" id="sound-file" accept="audio/*" onchange="handleAudioUpload(event)">
           <div id="custom-sound-status" style="font-size:12px; color:#48BB78; margin-top:4px;"></div>
+          
+          <!-- 音源の詳細表示エリア -->
+          <div id="sound-details-container" class="sound-details-box" style="display:none;">
+            <div><strong>ファイル名:</strong> <span id="sound-filename">-</span></div>
+            <div><strong>サイズ:</strong> <span id="sound-filesize">-</span></div>
+          </div>
         </div>
 
-        <button onclick="testSound()" style="background-color:#718096; margin-top:8px; padding:8px;">通知音をテスト再生</button>
+        <button onclick="testSound()" style="background-color:#718096; margin-top:12px; padding:8px;">通知音をテスト再生</button>
       </div>
 
       <button onclick="logout()" style="background-color: transparent; color: #A0AEC0; margin-top:20px; font-weight:normal; box-shadow:none;">ログアウト</button>
@@ -597,7 +602,6 @@
   appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
   measurementId: "G-2799DMKZTY"
 };
-
     let db = null;
     try {
       if (window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -627,13 +631,31 @@
         req.onupgradeneeded = function(e) {
           e.target.result.createObjectStore("sounds");
         };
-        req.onsuccess = function(e) {
-          resolve(e.target.result);
-        };
-        req.onerror = function(e) {
-          reject(e);
-        };
+        req.onsuccess = function(e) { resolve(e.target.result); };
+        req.onerror = function(e) { reject(e); };
       });
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function updateSoundDetailsUI(file) {
+      const detailsContainer = document.getElementById("sound-details-container");
+      const nameElem = document.getElementById("sound-filename");
+      const sizeElem = document.getElementById("sound-filesize");
+
+      if (file) {
+        nameElem.textContent = file.name || "カスタム音源";
+        sizeElem.textContent = formatBytes(file.size);
+        detailsContainer.style.display = "block";
+      } else {
+        detailsContainer.style.display = "none";
+      }
     }
 
     async function saveCustomSound(file) {
@@ -642,7 +664,8 @@
         const tx = dbInstance.transaction("sounds", "readwrite");
         tx.objectStore("sounds").put(file, "customSound");
         customAudioBlob = file;
-        document.getElementById("custom-sound-status").textContent = "🎵 カスタム通知音を保存しました (" + file.name + ")";
+        document.getElementById("custom-sound-status").textContent = "🎵 カスタム通知音を保存しました";
+        updateSoundDetailsUI(file);
         log("カスタム通知音をIndexedDBに保存しました: " + file.name, "info");
       } catch (e) {
         log("通知音の保存に失敗しました", "err");
@@ -658,6 +681,7 @@
           if (req.result) {
             customAudioBlob = req.result;
             document.getElementById("custom-sound-status").textContent = "🎵 保存されたカスタム通知音を使用中";
+            updateSoundDetailsUI(customAudioBlob);
             log("IndexedDBからカスタム通知音を読み込みました", "info");
           }
         };
@@ -677,9 +701,7 @@
       banner.className = type;
       banner.style.display = 'block';
 
-      if (window.inlineBannerTimer) {
-        clearTimeout(window.inlineBannerTimer);
-      }
+      if (window.inlineBannerTimer) clearTimeout(window.inlineBannerTimer);
       if (duration > 0) {
         window.inlineBannerTimer = setTimeout(function() {
           banner.style.display = 'none';
@@ -698,44 +720,45 @@
       logBox.scrollTop = logBox.scrollHeight;
     }
 
-    // --- 初期化処理 (読み込み画面の安全解除を追加) ---
+    // --- Firebaseでセッションを検索しログイン状態を判定 ---
+    async function checkUserLoggedIn(user) {
+      const userClean = user.toLowerCase();
+      if (!db) {
+        // Firebase非連携時はローカル保持のみで判断
+        return true;
+      }
+      try {
+        const banSnap = await db.ref("banned_users/" + userClean).get();
+        if (banSnap.exists()) {
+          showNotificationBanner("🚫 このアカウントは利用停止（BAN）されています。", "danger", 5000);
+          return false;
+        }
+
+        const sessionSnap = await db.ref("sessions/" + userClean).get();
+        return sessionSnap.exists() && sessionSnap.val().loggedIn === true;
+      } catch (e) {
+        log("Firebaseセッション確認エラー（直接ログインを許可）", "err");
+        return true;
+      }
+    }
+
+    // --- 初期化処理 ---
     window.addEventListener("DOMContentLoaded", async function() {
       log("アプリケーションの初期化を行っています...");
-
-      // 万が一のタイムアウト強制解除 (1.2秒後)
       const forceHideTimer = setTimeout(hideLoadingOverlay, 1200);
 
       try {
         await loadCustomSound();
 
         const savedUser = localStorage.getItem("scratch_user");
-        if (savedUser && db) {
-          const userClean = savedUser.toLowerCase();
-          
-          try {
-            const banSnap = await db.ref("banned_users/" + userClean).get();
-            if (banSnap.exists()) {
-              showNotificationBanner("🚫 このアカウントは利用停止（BAN）されています。", "danger", 5000);
-              localStorage.removeItem("scratch_user");
-              clearTimeout(forceHideTimer);
-              hideLoadingOverlay();
-              return;
-            }
-
-            const sessionSnap = await db.ref("sessions/" + userClean).get();
-            if (sessionSnap.exists() && sessionSnap.val().loggedIn) {
-              targetUsername = savedUser;
-              initDashboard();
-            } else {
-              localStorage.removeItem("scratch_user");
-            }
-          } catch (e) {
+        if (savedUser) {
+          const isLoggedIn = await checkUserLoggedIn(savedUser);
+          if (isLoggedIn) {
             targetUsername = savedUser;
             initDashboard();
+          } else {
+            localStorage.removeItem("scratch_user");
           }
-        } else if (savedUser) {
-          targetUsername = savedUser;
-          initDashboard();
         }
       } catch (err) {
         log("初期化エラー: " + err.message, "err");
@@ -762,19 +785,12 @@
     usernameInput.addEventListener("keypress", function(e) {
       if (e.key === "Enter") {
         e.preventDefault();
-        startVerification();
+        checkUserSessionAndProceed();
       }
     });
 
-    function resetTurnstile() {
-      if (window.turnstile) {
-        try {
-          window.turnstile.reset("#turnstile-container");
-        } catch (e) {}
-      }
-    }
-
-    async function startVerification() {
+    // --- 入力時にFirebaseを確かめて認証かダッシュボードか振り分ける ---
+    async function checkUserSessionAndProceed() {
       const input = usernameInput.value.trim();
       if (!input) {
         showError("err-step1", "ユーザー名を入力してください。");
@@ -785,21 +801,40 @@
         return;
       }
 
+      showError("err-step1", "");
+      targetUsername = input;
+
       if (db) {
+        const uClean = input.toLowerCase();
         try {
-          const banSnap = await db.ref("banned_users/" + input.toLowerCase()).get();
+          const banSnap = await db.ref("banned_users/" + uClean).get();
           if (banSnap.exists()) {
             showError("err-step1", "🚫 このアカウントは利用停止（BAN）されています。");
             return;
           }
-        } catch (e) {}
+
+          const sessionSnap = await db.ref("sessions/" + uClean).get();
+          if (sessionSnap.exists() && sessionSnap.val().loggedIn === true) {
+            log("Firebase上でログインを確認。認証をスキップします。", "info");
+            localStorage.setItem("scratch_user", targetUsername);
+            initDashboard();
+            return;
+          }
+        } catch (e) {
+          log("Firebaseチェック例外発生。通常の認証へ移動します。", "err");
+        }
       }
 
-      showError("err-step1", "");
-      targetUsername = input;
-      log("対象ユーザー名セット: " + targetUsername);
+      // 未ログインなら通常の認証画面（Step 2）へ
+      log("未ログイン状態のため、セキュリティ検証を開始します。");
       resetTurnstile();
       showStep(2);
+    }
+
+    function resetTurnstile() {
+      if (window.turnstile) {
+        try { window.turnstile.reset("#turnstile-container"); } catch (e) {}
+      }
     }
 
     function onTurnstileSuccess(token) {
@@ -828,9 +863,7 @@
         log("認証コードをコピーしました。");
         const toast = document.getElementById("copy-toast");
         toast.style.display = "block";
-        setTimeout(function() {
-          toast.style.display = "none";
-        }, 3000);
+        setTimeout(function() { toast.style.display = "none"; }, 3000);
       });
     }
 
@@ -974,9 +1007,7 @@
       if (customAudioBlob) {
         const url = URL.createObjectURL(customAudioBlob);
         const audio = new Audio(url);
-        audio.play().catch(function() {
-          playDefaultSound();
-        });
+        audio.play().catch(function() { playDefaultSound(); });
       } else {
         playDefaultSound();
       }
@@ -995,9 +1026,7 @@
 
     function showStep(stepNum) {
       const panels = document.querySelectorAll(".step-panel");
-      panels.forEach(function(panel) {
-        panel.classList.remove("active");
-      });
+      panels.forEach(function(panel) { panel.classList.remove("active"); });
       document.getElementById("step-" + stepNum).classList.add("active");
     }
 
@@ -1045,9 +1074,7 @@
 
     function showAdminSubpanel(panelId) {
       const subpanels = document.querySelectorAll(".admin-subpanel");
-      subpanels.forEach(function(p) {
-        p.classList.remove("active");
-      });
+      subpanels.forEach(function(p) { p.classList.remove("active"); });
       document.getElementById(panelId).classList.add("active");
 
       if (panelId === 'sub-users') renderRegisteredUsers();
