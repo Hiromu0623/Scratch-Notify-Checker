@@ -671,13 +671,16 @@
 
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "scratch-notify.firebaseapp.com",
-      databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
-      projectId: "scratch-notify",
-      storageBucket: "scratch-notify.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
+  authDomain: "scratch-notify.firebaseapp.com",
+  databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
+  projectId: "scratch-notify",
+  storageBucket: "scratch-notify.firebasestorage.app",
+  messagingSenderId: "340553335348",
+  appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
+  measurementId: "G-2799DMKZTY"
+};
+
     };
 
     let db = null;
@@ -1155,24 +1158,26 @@
       } catch (err) {}
     }
 
-    // 音声の上書き再生コントロール
+   // 強化版：音声再生処理（自動再生制限の回避 ＆ フォールバック）
     function playAudioSource(srcUrl) {
-      if (globalAudioPlayer) {
-        globalAudioPlayer.pause();
-        globalAudioPlayer.currentTime = 0;
-      } else {
+      if (!globalAudioPlayer) {
         globalAudioPlayer = new Audio();
       }
 
       globalAudioPlayer.src = srcUrl;
       globalAudioPlayer.currentTime = 0;
-      
-      globalAudioPlayer.play().then(function() {
-        log("通知音を再生しました（上書き）", "info");
-      }).catch(function(e) {
-        log("ファイル再生制限または不備のためビープ音を起動します: " + e.message, "info");
-        playBeepSound();
-      });
+
+      const playPromise = globalAudioPlayer.play();
+
+      if (playPromise !== undefined) {
+        playPromise.then(function() {
+          log("通知音を再生しました", "info");
+        }).catch(function(e) {
+          log("音声再生が制限されたかファイルが見つかりません: " + e.message, "err");
+          // ファイル読み込みや自動再生に失敗した場合は合成ビープ音を再生
+          playBeepSound();
+        });
+      }
     }
 
     function playNotificationSound() {
