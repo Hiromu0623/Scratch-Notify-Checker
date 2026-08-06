@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scratch通知数チェッカー</title>
   
-  <!-- タブ・リンクバー（ファビコン）アイコンの設定 -->
   <link rel="icon" href="1000006736-500x500.jpg" type="image/jpeg">
 
   <!-- Cloudflare Turnstile API -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  <!-- Firebase SDK (v9 互換モード) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   
   <style>
     @font-face {
@@ -44,7 +47,6 @@
       position: relative;
     }
 
-    /* 画面上部固定のインライン通知バナー（alert()の代替） */
     #inline-notification-banner {
       display: none;
       position: fixed;
@@ -62,20 +64,10 @@
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    #inline-notification-banner.success {
-      background-color: var(--success-green);
-      color: #FFFFFF;
-    }
-    #inline-notification-banner.danger {
-      background-color: var(--danger-color);
-      color: #FFFFFF;
-    }
-    #inline-notification-banner.info {
-      background-color: var(--scratch-blue);
-      color: #FFFFFF;
-    }
+    #inline-notification-banner.success { background-color: var(--success-green); color: #FFFFFF; }
+    #inline-notification-banner.danger { background-color: var(--danger-color); color: #FFFFFF; }
+    #inline-notification-banner.info { background-color: var(--scratch-blue); color: #FFFFFF; }
 
-    /* 読み込み中オーバーレイ */
     #loading-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -96,7 +88,6 @@
       margin-bottom: 16px;
     }
 
-    /* 全体コンテナ */
     .container {
       background: var(--card-bg);
       border-radius: 16px;
@@ -188,7 +179,6 @@
     .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
 
-    /* 画面右下固定の管理者メニューボタン（Hiromu0623専用） */
     .admin-toggle-btn {
       display: none; position: fixed; bottom: 20px; right: 20px; padding: 12px 20px;
       border-radius: 30px; background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: white;
@@ -197,7 +187,6 @@
     }
     .admin-toggle-btn:hover { transform: scale(1.05); }
 
-    /* システムログパネル */
     .log-panel {
       display: none; width: 100%; max-width: 480px; margin-top: 20px; background: #1A202C;
       color: #00FF66; font-family: monospace; font-size: 12px; border-radius: 10px; padding: 12px;
@@ -209,7 +198,6 @@
     .log-entry.err { color: #FF6565; }
     .log-entry.info { color: #63B3ED; }
 
-    /* 管理者モーダルウィンドウ */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;
@@ -237,18 +225,11 @@
     .user-actions { display: flex; gap: 6px; align-items: center; }
     .user-actions button { width: auto; padding: 6px 10px; font-size: 12px; margin: 0; }
 
-    /* 管理者保護バッジ */
     .protected-badge {
-      font-size: 11px;
-      font-weight: bold;
-      color: #3182CE;
-      background: #EBF8FF;
-      border: 1px solid #BEE3F8;
-      padding: 4px 8px;
-      border-radius: 6px;
+      font-size: 11px; font-weight: bold; color: #3182CE;
+      background: #EBF8FF; border: 1px solid #BEE3F8; padding: 4px 8px; border-radius: 6px;
     }
 
-    /* グラフ描画エリア */
     .chart-container {
       display: flex; align-items: flex-end; justify-content: space-around;
       height: 160px; border-bottom: 2px solid #CBD5E0; padding-top: 20px; margin: 20px 0;
@@ -258,7 +239,6 @@
     .chart-label { font-size: 10px; color: #718096; margin-top: 6px; }
     .chart-value { font-size: 11px; font-weight: bold; margin-bottom: 4px; }
 
-    /* 右クリックメニュー */
     #custom-context-menu {
       display: none; position: absolute; z-index: 10000; background: #FFFFFF;
       border: 1px solid #E2E8F0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -270,19 +250,15 @@
 </head>
 <body>
 
-  <!-- 画面上部インライン通知バナー（window.alert()の代替） -->
   <div id="inline-notification-banner"></div>
 
-  <!-- サイト読み込み中画面 -->
   <div id="loading-overlay">
     <div class="loading-spinner"></div>
     <div style="font-weight: bold; color: #4A5568;">読み込み中...</div>
   </div>
 
-  <!-- カスタム右クリックメニュー -->
   <div id="custom-context-menu"></div>
 
-  <!-- 右下 管理者ボタン (Hiromu0623専用) -->
   <div class="admin-toggle-btn" id="admin-btn" onclick="openAdminModal()">⚙️ 管理者メニュー</div>
 
   <div class="container">
@@ -291,13 +267,7 @@
     <div id="step-1" class="step-panel active">
       <h1>Scratch Notification</h1>
       <p style="color:#718096;">Scratchユーザー名を入力してください</p>
-      <input 
-        type="text" 
-        id="username-input" 
-        placeholder="例: Hiromu0623" 
-        maxlength="20"
-        autocomplete="off"
-      />
+      <input type="text" id="username-input" placeholder="例: Hiromu0623" maxlength="20" autocomplete="off" />
       <button id="btn-step1" onclick="startVerification()">次へ</button>
       <div id="err-step1" class="error-text"></div>
     </div>
@@ -322,7 +292,6 @@
       </p>
 
       <div class="timer-badge">有効期限 <span id="timer-display">05:00</span></div>
-
       <div id="copy-toast" class="toast-msg">✅ コードをクリップボードにコピーしました！</div>
 
       <div class="code-container">
@@ -371,12 +340,10 @@
     </div>
   </div>
 
-  <!-- 下部リアルタイムログモニター -->
   <div class="log-panel" id="sys-log">
     <div class="log-entry info">[SYSTEM] ログモニターが起動しました。</div>
   </div>
 
-  <!-- 管理者用 モーダル画面 -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="closeAdminModal()">✖</button>
@@ -390,19 +357,16 @@
         <button onclick="showAdminSubpanel('sub-manage')" style="background-color: #4A5568;">🛠️ アカウントの管理</button>
       </div>
 
-      <!-- サブパネル1: 登録ユーザー表示 -->
       <div id="sub-users" class="admin-subpanel">
         <h3>登録済みユーザー一覧</h3>
         <div id="registered-users-list"></div>
       </div>
 
-      <!-- サブパネル2: サイト使用回数グラフ -->
       <div id="sub-usage" class="admin-subpanel">
         <h3>1日あたりのサイト使用回数 (過去7日間)</h3>
         <div class="chart-container" id="usage-chart"></div>
       </div>
 
-      <!-- サブパネル3: アカウント管理 -->
       <div id="sub-manage" class="admin-subpanel">
         <h3>アカウント管理</h3>
         <div id="account-manage-list"></div>
@@ -413,6 +377,26 @@
   </div>
 
   <script>
+    // ★★★ Firebaseの設定情報をここに貼り付けてください ★★★
+    const firebaseConfig = {
+      apiKey: "★YOUR_API_KEY★",
+      authDomain: "★YOUR_PROJECT_ID★.firebaseapp.com",
+      databaseURL: "https://★YOUR_PROJECT_ID★-default-rtdb.firebaseio.com",
+      projectId: "★YOUR_PROJECT_ID★",
+      storageBucket: "★YOUR_PROJECT_ID★.appspot.com",
+      messagingSenderId: "★YOUR_SENDER_ID★",
+      appId: "★YOUR_APP_ID★"
+    };
+
+    // Firebase 初期化
+    let db = null;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+    } catch (e) {
+      console.warn("FirebaseConfigが未設定のため、LocalStorageモードで動きます。");
+    }
+
     const CORS_PROXY = "https://corsproxy.io/?";
     const ADMIN_USER = "Hiromu0623";
 
@@ -420,27 +404,66 @@
     let authCode = "";
     let checkInterval = null;
     let timerInterval = null;
+    let autoUpdateInterval = null;
     let timeRemaining = 300;
     let currentMessageCount = null;
     let isWaitingForAuth = false;
+    let bannedCache = []; // BAN状態のキャッシュ
 
-    /* インライン画面通知システム (window.alert() の代替) */
-    let inlineBannerTimer = null;
     function showNotificationBanner(msg, type = 'info', duration = 4000) {
       const banner = document.getElementById('inline-notification-banner');
       banner.textContent = msg;
       banner.className = type;
       banner.style.display = 'block';
 
-      if (inlineBannerTimer) clearTimeout(inlineBannerTimer);
+      if (window.inlineBannerTimer) clearTimeout(window.inlineBannerTimer);
       if (duration > 0) {
-        inlineBannerTimer = setTimeout(() => {
+        window.inlineBannerTimer = setTimeout(() => {
           banner.style.display = 'none';
         }, duration);
       }
     }
 
-    /* LocalStorage データベース擬似管理 */
+    /* データベース抽象化レイヤー (Firebase ⇄ LocalStorage 自動切り替え) */
+    function syncBannedList(callback) {
+      if (db) {
+        db.ref("banned_users").on("value", (snapshot) => {
+          const val = snapshot.val();
+          bannedCache = val ? Object.values(val).map(v => String(v).toLowerCase()) : [];
+          if (callback) callback(bannedCache);
+        });
+      } else {
+        const local = JSON.parse(localStorage.getItem("app_banned_users") || "[]");
+        bannedCache = local.map(v => String(v).toLowerCase());
+        if (callback) callback(bannedCache);
+      }
+    }
+
+    function setBannedUserInDb(username, isBanned) {
+      const lower = username.toLowerCase();
+      if (db) {
+        if (isBanned) {
+          db.ref("banned_users/" + lower).set(lower);
+        } else {
+          db.ref("banned_users/" + lower).remove();
+        }
+      } else {
+        let local = JSON.parse(localStorage.getItem("app_banned_users") || "[]");
+        if (isBanned) {
+          if (!local.includes(lower)) local.push(lower);
+        } else {
+          local = local.filter(u => u !== lower);
+        }
+        localStorage.setItem("app_banned_users", JSON.stringify(local));
+        bannedCache = local;
+      }
+    }
+
+    function isUserBanned(username) {
+      if (!username) return false;
+      return bannedCache.includes(username.toLowerCase());
+    }
+
     function getDbData(key, defaultVal) {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : defaultVal;
@@ -449,7 +472,6 @@
       localStorage.setItem(key, JSON.stringify(val));
     }
 
-    // ユーザー登録記録
     function registerUserRecord(username) {
       let users = getDbData("app_users", []);
       let existing = users.find(u => u.name.toLowerCase() === username.toLowerCase());
@@ -462,7 +484,6 @@
       recordDailyUsage();
     }
 
-    // 日別アクセス回数記録
     function recordDailyUsage() {
       const today = new Date().toISOString().split('T')[0];
       let usage = getDbData("app_daily_usage", {});
@@ -470,18 +491,10 @@
       setDbData("app_daily_usage", usage);
     }
 
-    // BANチェック
-    function isUserBanned(username) {
-      let bannedList = getDbData("app_banned_users", []);
-      return bannedList.includes(username.toLowerCase());
-    }
-
-    // ログ表示/非表示（管理者メニュー内のボタンから操作）
     function toggleLogPanel() {
       document.getElementById("sys-log").classList.toggle("visible");
     }
 
-    // ログ書き込み関数
     function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
       const entry = document.createElement("div");
@@ -492,11 +505,18 @@
       logBox.scrollTop = logBox.scrollHeight;
     }
 
-    // 初開時ロード処理
     window.addEventListener("DOMContentLoaded", () => {
       log("アプリケーションの初期化を行っています...");
+
+      // BANリストのリアルタイム同期を開始
+      syncBannedList((list) => {
+        // ログイン中に自分がBANされた場合の即時ログアウト処理
+        if (targetUsername && isUserBanned(targetUsername)) {
+          showNotificationBanner("🚫 あなたのアカウントはBANされました。", "danger", 5000);
+          logout();
+        }
+      });
       
-      // 読み込み完了アニメーション
       setTimeout(() => {
         const overlay = document.getElementById("loading-overlay");
         overlay.style.opacity = "0";
@@ -506,7 +526,7 @@
       const savedUser = localStorage.getItem("scratch_user");
       if (savedUser) {
         if (isUserBanned(savedUser)) {
-          showNotificationBanner("🚫 このアカウントはアクセスが制限（BAN）されています。", "danger", 5000);
+          showNotificationBanner("🚫 このアカウントは利用停止されています。", "danger", 5000);
           localStorage.removeItem("scratch_user");
           return;
         }
@@ -516,7 +536,6 @@
       }
     });
 
-    /* 入力制限 & Enter */
     const usernameInput = document.getElementById("username-input");
     usernameInput.addEventListener("input", function () {
       this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -528,7 +547,6 @@
       }
     });
 
-    /* DevTools 対策 & 右クリックメニュー */
     window.addEventListener("keydown", function (e) {
       if (
         e.keyCode === 123 || 
@@ -571,7 +589,6 @@
     });
     document.addEventListener("click", () => contextMenu.style.display = "none");
 
-    /* 離脱防止 */
     window.addEventListener("beforeunload", function (e) {
       if (isWaitingForAuth) {
         e.preventDefault();
@@ -651,7 +668,7 @@
         updateTimerDisplay();
         if (timeRemaining <= 0) {
           clearInterval(timerInterval);
-          showNotificationBanner("⏰ 認証の制限時間（5分）が切れました。最初からやり直してください。", "danger");
+          showNotificationBanner("⏰ 認証の制限時間が切れました。最初からやり直してください。", "danger");
           cancelVerification();
         }
       }, 1000);
@@ -664,12 +681,9 @@
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
-    // 認証成功音（ファンファーレ調・音量大きめ）
     function playSuccessSound() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // 1音目: G5 (783.99 Hz)
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
         osc1.type = "sine";
@@ -681,7 +695,6 @@
         osc1.start(ctx.currentTime);
         osc1.stop(ctx.currentTime + 0.2);
 
-        // 2音目: C6 (1046.50 Hz) - 華やかな高音
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
         osc2.type = "sine";
@@ -692,9 +705,7 @@
         gain2.connect(ctx.destination);
         osc2.start(ctx.currentTime + 0.15);
         osc2.stop(ctx.currentTime + 0.6);
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     }
 
     function startBioPolling() {
@@ -717,7 +728,6 @@
             if (timerInterval) clearInterval(timerInterval);
             isWaitingForAuth = false;
 
-            // 認証成功通知音＆画面内インライン通知表示
             playSuccessSound();
             showNotificationBanner("🎉 認証が完了しました！", "success", 5000);
 
@@ -747,9 +757,7 @@
       document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
       log(`ダッシュボード表示: ${targetUsername}`, "info");
 
-      // 管理者（Hiromu0623）判定で管理者ボタンを表示
       const adminBtn = document.getElementById("admin-btn");
-      
       if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
         adminBtn.style.display = "block";
         log("管理者アカウント（Hiromu0623）を認証。管理者機能を有効化しました。", "info");
@@ -759,12 +767,14 @@
       }
 
       updateMessageCount();
-      setInterval(updateMessageCount, 10000);
+      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+      autoUpdateInterval = setInterval(updateMessageCount, 10000);
     }
 
+    /* 修正済みの通知数更新関数 */
     async function updateMessageCount() {
-      // BANチェック（リアルタイム対応）
-      if (isUserBanned(targetUsername)) {
+      // 厳密なBAN判定（誤作動防止）
+      if (targetUsername && isUserBanned(targetUsername)) {
         showNotificationBanner("🚫 このアカウントは管理者によりBANされました。", "danger", 5000);
         logout();
         return;
@@ -789,7 +799,6 @@
       }
     }
 
-    // 通知数増加の通知音（音量大きめに調整）
     function playNotificationSound() {
       if (!document.getElementById("audio-toggle").checked) return;
       const fileInput = document.getElementById("sound-file");
@@ -831,12 +840,13 @@
     function logout() {
       if (checkInterval) clearInterval(checkInterval);
       if (timerInterval) clearInterval(timerInterval);
+      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+      
       localStorage.removeItem("scratch_user");
       currentMessageCount = null;
       targetUsername = "";
       usernameInput.value = "";
       
-      // 管理者要素を隠す
       document.getElementById("admin-btn").style.display = "none";
       document.getElementById("sys-log").classList.remove("visible");
 
@@ -844,9 +854,7 @@
       showStep(1);
     }
 
-    /* ========================================================
-       ⚙️ 管理者パネル機能 (Hiromu0623 専用)
-       ======================================================== */
+    /* 管理者メニュー機能 */
     function openAdminModal() {
       document.getElementById("admin-modal").classList.add("active");
       log("管理者モーダルを開きました。");
@@ -865,7 +873,6 @@
       if (panelId === 'sub-manage') renderAccountManagement();
     }
 
-    // 1. 登録済みユーザー一覧の描画
     function renderRegisteredUsers() {
       const container = document.getElementById("registered-users-list");
       const users = getDbData("app_users", []);
@@ -883,12 +890,9 @@
       `).join('');
     }
 
-    // 2. サイト使用回数グラフの描画
     function renderUsageChart() {
       const container = document.getElementById("usage-chart");
       const usage = getDbData("app_daily_usage", {});
-      
-      // 過去7日分の日付を生成
       const dates = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
@@ -902,7 +906,7 @@
       container.innerHTML = dates.map((d, idx) => {
         const val = values[idx];
         const heightPercent = Math.round((val / maxVal) * 100);
-        const labelStr = d.slice(5); // MM-DD
+        const labelStr = d.slice(5);
         return `
           <div class="chart-bar-wrap">
             <div class="chart-value">${val}</div>
@@ -913,11 +917,9 @@
       }).join('');
     }
 
-    // 3. アカウント管理（ログアウト・BAN・情報参照）の描画（Hiromu0623 BAN除外対応）
     function renderAccountManagement() {
       const container = document.getElementById("account-manage-list");
       const users = getDbData("app_users", []);
-      const bannedList = getDbData("app_banned_users", []);
 
       if (users.length === 0) {
         container.innerHTML = "<p style='font-size:13px; color:#718096;'>対象ユーザーがいません。</p>";
@@ -925,10 +927,9 @@
       }
 
       container.innerHTML = users.map(u => {
-        const isBanned = bannedList.includes(u.name.toLowerCase());
+        const isBanned = isUserBanned(u.name);
         const isAdminHiromu = (u.name.toLowerCase() === ADMIN_USER.toLowerCase());
 
-        // Hiromu0623 の場合はBANボタンを出さず保護表示
         let banButtonHtml = '';
         if (isAdminHiromu) {
           banButtonHtml = `<span class="protected-badge">[管理者保護]</span>`;
@@ -955,7 +956,6 @@
       }).join('');
     }
 
-    // 管理者操作: 強制ログアウト
     function adminLogoutUser(username) {
       if (username.toLowerCase() === targetUsername.toLowerCase()) {
         logout();
@@ -966,32 +966,23 @@
       }
     }
 
-    // 管理者操作: BAN切り替え（Hiromu0623二重ガード付き）
     function adminToggleBan(username) {
       if (username.toLowerCase() === ADMIN_USER.toLowerCase()) {
         showNotificationBanner("🚫 最高管理者（Hiromu0623）をBANすることはできません。", "danger");
         return;
       }
 
-      let banned = getDbData("app_banned_users", []);
-      const lower = username.toLowerCase();
-      
-      if (banned.includes(lower)) {
-        banned = banned.filter(b => b !== lower);
-        showNotificationBanner(`${username} のBANを解除しました。`, "success");
-      } else {
-        banned.push(lower);
+      const isBanned = isUserBanned(username);
+      setBannedUserInDb(username, !isBanned);
+
+      if (!isBanned) {
         showNotificationBanner(`${username} をBANしました。`, "danger");
-        if (username.toLowerCase() === targetUsername.toLowerCase()) {
-          logout();
-          closeAdminModal();
-        }
+      } else {
+        showNotificationBanner(`${username} のBANを解除しました。`, "success");
       }
-      setDbData("app_banned_users", banned);
       renderAccountManagement();
     }
 
-    // 管理者操作: アカウント情報ダイアログ（画面内バナー化）
     async function adminShowUserInfo(username) {
       const users = getDbData("app_users", []);
       const user = users.find(u => u.name.toLowerCase() === username.toLowerCase());
