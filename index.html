@@ -305,34 +305,61 @@
       margin-top: 8px;
     }
 
+    /* 新仕様：お知らせコンテナ */
     .news-container {
       width: 100%;
       max-width: 480px;
       margin-top: 32px;
       background: var(--card-bg);
       border-radius: 16px;
-      padding: 24px;
+      padding: 20px 24px;
       box-sizing: border-box;
       box-shadow: 0 10px 25px rgba(0,0,0,0.08);
       text-align: left;
+    }
+    .news-header-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .news-title {
       font-size: 18px;
       font-weight: bold;
       color: var(--text-color);
-      margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 8px;
-      border-bottom: 2px solid #EDF2F7;
-      padding-bottom: 8px;
+      margin: 0;
+    }
+    .news-master-toggle-btn {
+      width: auto;
+      background: #EDF2F7;
+      color: #4A5568;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      margin: 0;
+      box-shadow: none;
+      font-weight: bold;
+    }
+    .news-master-toggle-btn:hover {
+      background: #E2E8F0;
+      transform: none;
+      box-shadow: none;
     }
     .news-list {
-      display: flex;
+      display: none;
       flex-direction: column;
       gap: 12px;
       max-height: 400px;
       overflow-y: auto;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 2px solid #EDF2F7;
+    }
+    .news-list.open {
+      display: flex;
+      animation: fadeIn 0.3s ease;
     }
     .news-item {
       background: #F8FAFC;
@@ -344,7 +371,7 @@
     .news-item.warning { border-left-color: var(--scratch-orange); }
     .news-item.important { border-left-color: var(--danger-color); }
 
-    .news-header {
+    .news-item-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -359,24 +386,7 @@
       font-weight: bold;
       color: #2D3748;
     }
-    .news-toggle-btn {
-      width: auto;
-      background: #EDF2F7;
-      color: #4A5568;
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      margin: 8px 0 0 0;
-      box-shadow: none;
-      font-weight: bold;
-    }
-    .news-toggle-btn:hover {
-      background: #E2E8F0;
-      transform: none;
-      box-shadow: none;
-    }
     .news-content {
-      display: none;
       font-size: 13px;
       color: #4A5568;
       line-height: 1.5;
@@ -384,9 +394,7 @@
       margin-top: 8px;
       padding-top: 8px;
       border-top: 1px dashed #E2E8F0;
-      animation: fadeIn 0.2s ease;
     }
-    .news-content.open { display: block; }
 
     .admin-toggle-btn {
       display: none;
@@ -643,9 +651,12 @@
     </div>
   </div>
 
-  <!-- お知らせ領域 (アコーディオン式) -->
+  <!-- お知らせ領域 (一括開閉アコーディオン) -->
   <div class="news-container">
-    <div class="news-title">📢 お知らせ・更新情報</div>
+    <div class="news-header-box">
+      <div class="news-title">📢 お知らせ・更新情報</div>
+      <button id="master-news-toggle-btn" class="news-master-toggle-btn" onclick="toggleMasterNews()">▼ 詳細を表示</button>
+    </div>
     <div id="news-list" class="news-list">
       <div style="font-size:12px; color:#A0AEC0; text-align:center;">お知らせを読み込んでいます...</div>
     </div>
@@ -695,7 +706,7 @@
   </div>
 
   <script>
-   const firebaseConfig = {
+    const firebaseConfig = {
   apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
   authDomain: "scratch-notify.firebaseapp.com",
   databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
@@ -730,11 +741,48 @@
     let customAudioBlob = null;
     let customAudioUrl = null;
     let globalAudioPlayer = null;
+    let sharedAudioContext = null;
+    let isAudioUnlocked = false;
     let sessionRef = null;
     let currentStep = 1;
-
-    // 10秒自動検出用タイマー変数
     let loadingTimeoutTimer = null;
+
+    // 🔊 ユーザー操作でブラウザの音声再生ブロックを即座に解除する処理
+    function unlockAudioSystem() {
+      if (isAudioUnlocked) return;
+
+      // HTML5 Audioプレイヤーのプレアンロック
+      if (!globalAudioPlayer) {
+        globalAudioPlayer = new Audio();
+      }
+      globalAudioPlayer.play().then(function() {
+        globalAudioPlayer.pause();
+        globalAudioPlayer.currentTime = 0;
+      }).catch(function() {});
+
+      // Web Audio API（ビープ音）のプレアンロック
+      try {
+        if (!sharedAudioContext) {
+          sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (sharedAudioContext.state === "suspended") {
+          sharedAudioContext.resume();
+        }
+      } catch (e) {}
+
+      isAudioUnlocked = true;
+      log("音声システムがアクティベート（アンロック）されました", "info");
+
+      // 一度アクティベートできたらイベントリスナーを削除
+      window.removeEventListener("click", unlockAudioSystem);
+      window.removeEventListener("keydown", unlockAudioSystem);
+      window.removeEventListener("touchstart", unlockAudioSystem);
+    }
+
+    // 初回ユーザー操作を検知
+    window.addEventListener("click", unlockAudioSystem);
+    window.addEventListener("keydown", unlockAudioSystem);
+    window.addEventListener("touchstart", unlockAudioSystem);
 
     function openAudioDB() {
       return new Promise(function(resolve, reject) {
@@ -853,18 +901,15 @@
         }
 
         let html = "";
-        newsItems.forEach(function(item, index) {
+        newsItems.forEach(function(item) {
           const typeClass = item.type || "info";
-          const contentId = "news-content-" + index;
-          const btnId = "news-btn-" + index;
 
           html += '<div class="news-item ' + typeClass + '">';
-          html += '  <div class="news-header">';
+          html += '  <div class="news-item-header">';
           html += '    <div class="news-item-title">' + (item.title || 'お知らせ') + '</div>';
           html += '    <div class="news-date">' + (item.date || '') + '</div>';
           html += '  </div>';
-          html += '  <button id="' + btnId + '" class="news-toggle-btn" onclick="toggleNewsContent(\'' + contentId + '\', \'' + btnId + '\')">▼ 詳細を開く</button>';
-          html += '  <div id="' + contentId + '" class="news-content">' + (item.content || '') + '</div>';
+          html += '  <div class="news-content">' + (item.content || '') + '</div>';
           html += '</div>';
         });
 
@@ -875,16 +920,17 @@
       }
     }
 
-    function toggleNewsContent(contentId, btnId) {
-      const contentElem = document.getElementById(contentId);
-      const btnElem = document.getElementById(btnId);
+    // 全体お知らせの開閉トグル
+    function toggleMasterNews() {
+      const newsList = document.getElementById("news-list");
+      const btn = document.getElementById("master-news-toggle-btn");
 
-      if (contentElem.classList.contains("open")) {
-        contentElem.classList.remove("open");
-        btnElem.textContent = "▼ 詳細を開く";
+      if (newsList.classList.contains("open")) {
+        newsList.classList.remove("open");
+        btn.textContent = "▼ 詳細を表示";
       } else {
-        contentElem.classList.add("open");
-        btnElem.textContent = "▲ 詳細を閉じる";
+        newsList.classList.add("open");
+        btn.textContent = "▲ 詳細を隠す";
       }
     }
 
@@ -909,7 +955,6 @@
       }
     }
 
-    // ログ記録（メインログとローディング用ログ両方に書き込み）
     function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
       const loadingLogBox = document.getElementById("loading-sys-log");
@@ -951,7 +996,6 @@
       }
     }
 
-    // ローディング開始時：10秒監視タイマーのセット
     function startLoadingTimeoutWatch() {
       const msgBox = document.getElementById("loading-timeout-msg");
       if (msgBox) msgBox.style.display = "none";
@@ -968,7 +1012,7 @@
 
     window.addEventListener("DOMContentLoaded", async function() {
       log("初期化処理中...");
-      startLoadingTimeoutWatch(); // 10秒監視開始
+      startLoadingTimeoutWatch();
 
       recordPageVisit();
 
@@ -993,7 +1037,6 @@
       }
     });
 
-    // 読み込み完了時：ローディング画面とタイマー・案内文を削除
     function hideLoadingOverlay() {
       if (loadingTimeoutTimer) clearTimeout(loadingTimeoutTimer);
 
@@ -1255,26 +1298,35 @@
 
     function playBeepSound() {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        if (!sharedAudioContext) {
+          sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (sharedAudioContext.state === "suspended") {
+          sharedAudioContext.resume();
+        }
+
+        const osc = sharedAudioContext.createOscillator();
+        const gain = sharedAudioContext.createGain();
 
         osc.type = "sine";
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        osc.frequency.setValueAtTime(880, sharedAudioContext.currentTime);
+        gain.gain.setValueAtTime(0.1, sharedAudioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, sharedAudioContext.currentTime + 0.5);
 
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(sharedAudioContext.destination);
 
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.5);
+        osc.stop(sharedAudioContext.currentTime + 0.5);
+        log("合成ビープ音を再生しました", "info");
       } catch (err) {
         log("ビープ音再生エラー: " + err.message, "err");
       }
     }
 
     function testSound() {
+      unlockAudioSystem();
       playNotificationSound();
     }
 
