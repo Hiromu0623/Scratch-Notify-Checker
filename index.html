@@ -482,29 +482,6 @@
       font-weight: bold;
       margin-bottom: 4px;
     }
-
-    #custom-context-menu {
-      display: none;
-      position: absolute;
-      z-index: 10000;
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 8px 0;
-      min-width: 160px;
-      text-align: left;
-    }
-    #custom-context-menu div {
-      padding: 8px 16px;
-      font-size: 14px;
-      color: var(--text-color);
-      cursor: pointer;
-    }
-    #custom-context-menu div:hover {
-      background-color: #F7FAFC;
-      color: var(--scratch-blue);
-    }
   </style>
 </head>
 <body>
@@ -515,8 +492,6 @@
     <div class="loading-spinner"></div>
     <div style="font-weight: bold; color: #4A5568;">読み込み中...</div>
   </div>
-
-  <div id="custom-context-menu"></div>
 
   <div class="admin-toggle-btn" id="admin-btn" onclick="openAdminModal()">⚙️ 管理者メニュー</div>
 
@@ -670,6 +645,7 @@
     let currentMessageCount = null;
     let isWaitingForAuth = false;
     let bannedCache = [];
+    let forceLogoutCache = [];
 
     function showNotificationBanner(msg, type = 'info', duration = 4000) {
       const banner = document.getElementById('inline-notification-banner');
@@ -687,29 +663,24 @@
       }
     }
 
-    function syncBannedList(callback) {
+    function syncBannedAndLogoutList(callback) {
       if (db) {
         db.ref("banned_users").on("value", function(snapshot) {
           const val = snapshot.val();
-          if (val) {
-            bannedCache = Object.values(val).map(function(v) {
-              return String(v).toLowerCase();
-            });
-          } else {
-            bannedCache = [];
-          }
-          if (callback) {
-            callback(bannedCache);
-          }
+          bannedCache = val ? Object.values(val).map(v => String(v).toLowerCase()) : [];
+          if (callback) callback();
+        });
+        db.ref("force_logout_users").on("value", function(snapshot) {
+          const val = snapshot.val();
+          forceLogoutCache = val ? Object.values(val).map(v => String(v).toLowerCase()) : [];
+          if (callback) callback();
         });
       } else {
-        const local = JSON.parse(localStorage.getItem("app_banned_users") || "[]");
-        bannedCache = local.map(function(v) {
-          return String(v).toLowerCase();
-        });
-        if (callback) {
-          callback(bannedCache);
-        }
+        const localBan = JSON.parse(localStorage.getItem("app_banned_users") || "[]");
+        bannedCache = localBan.map(v => String(v).toLowerCase());
+        const localLog = JSON.parse(localStorage.getItem("app_force_logout") || "[]");
+        forceLogoutCache = localLog.map(v => String(v).toLowerCase());
+        if (callback) callback();
       }
     }
 
@@ -724,33 +695,52 @@
       } else {
         let local = JSON.parse(localStorage.getItem("app_banned_users") || "[]");
         if (isBanned) {
-          if (!local.includes(lower)) {
-            local.push(lower);
-          }
+          if (!local.includes(lower)) local.push(lower);
         } else {
-          local = local.filter(function(u) {
-            return u !== lower;
-          });
+          local = local.filter(u => u !== lower);
         }
         localStorage.setItem("app_banned_users", JSON.stringify(local));
         bannedCache = local;
       }
     }
 
-    function isUserBanned(username) {
-      if (!username) {
-        return false;
+    function setForceLogoutInDb(username) {
+      const lower = username.toLowerCase();
+      if (db) {
+        db.ref("force_logout_users/" + lower).set(lower);
+      } else {
+        let local = JSON.parse(localStorage.getItem("app_force_logout") || "[]");
+        if (!local.includes(lower)) local.push(lower);
+        localStorage.setItem("app_force_logout", JSON.stringify(local));
+        forceLogoutCache = local;
       }
+    }
+
+    function clearForceLogoutInDb(username) {
+      const lower = username.toLowerCase();
+      if (db) {
+        db.ref("force_logout_users/" + lower).remove();
+      } else {
+        let local = JSON.parse(localStorage.getItem("app_force_logout") || "[]");
+        local = local.filter(u => u !== lower);
+        localStorage.setItem("app_force_logout", JSON.stringify(local));
+        forceLogoutCache = local;
+      }
+    }
+
+    function isUserBanned(username) {
+      if (!username) return false;
       return bannedCache.includes(String(username).toLowerCase());
+    }
+
+    function isUserForceLoggedOut(username) {
+      if (!username) return false;
+      return forceLogoutCache.includes(String(username).toLowerCase());
     }
 
     function getDbData(key, defaultVal) {
       const data = localStorage.getItem(key);
-      if (data) {
-        return JSON.parse(data);
-      } else {
-        return defaultVal;
-      }
+      return data ? JSON.parse(data) : defaultVal;
     }
 
     function setDbData(key, val) {
@@ -759,15 +749,9 @@
 
     function registerUserRecord(username) {
       let users = getDbData("app_users", []);
-      let existing = users.find(function(u) {
-        return u.name.toLowerCase() === username.toLowerCase();
-      });
+      let existing = users.find(u => u.name.toLowerCase() === username.toLowerCase());
       if (!existing) {
-        users.push({
-          name: username,
-          regDate: new Date().toLocaleString(),
-          count: 1
-        });
+        users.push({ name: username, regDate: new Date().toLocaleString(), count: 1 });
       } else {
         existing.count = (existing.count || 0) + 1;
       }
@@ -786,10 +770,7 @@
       document.getElementById("sys-log").classList.toggle("visible");
     }
 
-    function log(msg, type) {
-      if (!type) {
-        type = "normal";
-      }
+    function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
       const entry = document.createElement("div");
       const timeStr = new Date().toLocaleTimeString();
@@ -802,10 +783,21 @@
     window.addEventListener("DOMContentLoaded", function() {
       log("アプリケーションの初期化を行っています...");
 
-      syncBannedList(function(list) {
-        if (targetUsername && isUserBanned(targetUsername)) {
-          showNotificationBanner("🚫 あなたのアカウントはBANされました。", "danger", 5000);
-          logout();
+      syncBannedAndLogoutList(function() {
+        const savedUser = localStorage.getItem("scratch_user");
+        if (savedUser) {
+          if (isUserBanned(savedUser)) {
+            showNotificationBanner("🚫 このアカウントは利用停止されています。", "danger", 5000);
+            localStorage.removeItem("scratch_user");
+          } else if (isUserForceLoggedOut(savedUser)) {
+            showNotificationBanner("🔒 管理者によってログアウトさせられました。", "info", 5000);
+            clearForceLogoutInDb(savedUser);
+            localStorage.removeItem("scratch_user");
+          } else {
+            targetUsername = savedUser;
+            log("保存されたユーザー情報を検出: " + savedUser, "info");
+            initDashboard();
+          }
         }
       });
       
@@ -816,18 +808,6 @@
           overlay.style.display = "none";
         }, 300);
       }, 600);
-
-      const savedUser = localStorage.getItem("scratch_user");
-      if (savedUser) {
-        if (isUserBanned(savedUser)) {
-          showNotificationBanner("🚫 このアカウントは利用停止されています。", "danger", 5000);
-          localStorage.removeItem("scratch_user");
-          return;
-        }
-        targetUsername = savedUser;
-        log("保存されたユーザー情報を検出: " + savedUser, "info");
-        initDashboard();
-      }
     });
 
     const usernameInput = document.getElementById("username-input");
@@ -843,9 +823,7 @@
 
     function resetTurnstile() {
       if (window.turnstile) {
-        try {
-          window.turnstile.reset("#turnstile-container");
-        } catch (e) {}
+        try { window.turnstile.reset("#turnstile-container"); } catch (e) {}
       }
     }
 
@@ -872,9 +850,7 @@
     }
 
     function onTurnstileSuccess(token) {
-      if (!token || !targetUsername) {
-        return;
-      }
+      if (!token || !targetUsername) return;
       log("Cloudflare Turnstile セキュリティ認証成功", "info");
       generateUniqueCode();
       document.getElementById("auth-code-display").textContent = authCode;
@@ -899,9 +875,7 @@
         log("認証コードをコピーしました。");
         const toast = document.getElementById("copy-toast");
         toast.style.display = "block";
-        setTimeout(function() {
-          toast.style.display = "none";
-        }, 3000);
+        setTimeout(function() { toast.style.display = "none"; }, 3000);
       });
     }
 
@@ -910,9 +884,7 @@
     }
 
     function startTimer() {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
+      if (timerInterval) clearInterval(timerInterval);
       timeRemaining = 300;
       updateTimerDisplay();
 
@@ -962,9 +934,7 @@
     }
 
     function startBioPolling() {
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
+      if (checkInterval) clearInterval(checkInterval);
       isWaitingForAuth = true;
       log("プロフィールの「私について」監視を開始...", "info");
 
@@ -972,44 +942,34 @@
         try {
           const targetUrl = "https://api.scratch.mit.edu/users/" + targetUsername + "?_=" + Date.now();
           const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
-          if (!res.ok) {
-            return;
-          }
+          if (!res.ok) return;
           
           const userData = await res.json();
-          let bioText = "";
-          if (userData.profile) {
-            bioText = userData.profile.bio;
-          }
+          let bioText = userData.profile ? userData.profile.bio : "";
 
           if (bioText && bioText.includes(authCode)) {
             log("認証コードの記述を検出！認証完了！", "info");
             clearInterval(checkInterval);
-            if (timerInterval) {
-              clearInterval(timerInterval);
-            }
+            if (timerInterval) clearInterval(timerInterval);
             isWaitingForAuth = false;
 
             playSuccessSound();
             showNotificationBanner("🎉 認証が完了しました！", "success", 5000);
 
+            clearForceLogoutInDb(targetUsername);
             registerUserRecord(targetUsername);
             localStorage.setItem("scratch_user", targetUsername);
             initDashboard();
           }
         } catch (err) {
-          log("エラー発生: " + err.message, "err");
+          log("通信エラー（再試行中）: " + err.message, "err");
         }
       }, 3000);
     }
 
     function cancelVerification() {
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
+      if (checkInterval) clearInterval(checkInterval);
+      if (timerInterval) clearInterval(timerInterval);
       isWaitingForAuth = false;
       targetUsername = "";
       usernameInput.value = "";
@@ -1033,19 +993,22 @@
       }
 
       updateMessageCount();
-      if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-      }
+      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
       autoUpdateInterval = setInterval(updateMessageCount, 10000);
     }
 
     async function updateMessageCount() {
-      if (!targetUsername) {
-        return;
-      }
+      if (!targetUsername) return;
 
       if (isUserBanned(targetUsername)) {
         showNotificationBanner("🚫 このアカウントは管理者によりBANされました。", "danger", 5000);
+        logout();
+        return;
+      }
+
+      if (isUserForceLoggedOut(targetUsername)) {
+        showNotificationBanner("🔒 管理者によって強制ログアウトされました。", "info", 5000);
+        clearForceLogoutInDb(targetUsername);
         logout();
         return;
       }
@@ -1063,16 +1026,16 @@
           }
           currentMessageCount = count;
           document.getElementById("msg-count").textContent = count;
+        } else {
+          log("通知数通信一時エラー（ログイン維持）", "err");
         }
       } catch (err) {
-        log("通知数取得通信エラー（画面維持）: " + err.message, "err");
+        log("通知数取得エラー（ログイン維持）: " + err.message, "err");
       }
     }
 
     function playNotificationSound() {
-      if (!document.getElementById("audio-toggle").checked) {
-        return;
-      }
+      if (!document.getElementById("audio-toggle").checked) return;
       const fileInput = document.getElementById("sound-file");
       
       if (fileInput.files && fileInput.files[0]) {
@@ -1104,9 +1067,7 @@
 
     function showStep(stepNum) {
       const panels = document.querySelectorAll(".step-panel");
-      panels.forEach(function(panel) {
-        panel.classList.remove("active");
-      });
+      panels.forEach(panel => panel.classList.remove("active"));
       document.getElementById("step-" + stepNum).classList.add("active");
     }
 
@@ -1115,15 +1076,9 @@
     }
 
     function logout() {
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
-      if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-      }
+      if (checkInterval) clearInterval(checkInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
       
       localStorage.removeItem("scratch_user");
       currentMessageCount = null;
@@ -1148,20 +1103,12 @@
 
     function showAdminSubpanel(panelId) {
       const subpanels = document.querySelectorAll(".admin-subpanel");
-      subpanels.forEach(function(p) {
-        p.classList.remove("active");
-      });
+      subpanels.forEach(p => p.classList.remove("active"));
       document.getElementById(panelId).classList.add("active");
 
-      if (panelId === 'sub-users') {
-        renderRegisteredUsers();
-      }
-      if (panelId === 'sub-usage') {
-        renderUsageChart();
-      }
-      if (panelId === 'sub-manage') {
-        renderAccountManagement();
-      }
+      if (panelId === 'sub-users') renderRegisteredUsers();
+      if (panelId === 'sub-usage') renderUsageChart();
+      if (panelId === 'sub-manage') renderAccountManagement();
     }
 
     function renderRegisteredUsers() {
@@ -1172,7 +1119,7 @@
         return;
       }
       let html = "";
-      users.forEach(function(u) {
+      users.forEach(u => {
         html += '<div class="user-list-item">';
         html += '  <div>';
         html += '    <strong>' + u.name + '</strong>';
@@ -1193,13 +1140,11 @@
         dates.push(d.toISOString().split('T')[0]);
       }
 
-      const values = dates.map(function(d) {
-        return usage[d] || 0;
-      });
+      const values = dates.map(d => usage[d] || 0);
       const maxVal = Math.max(...values, 5);
 
       let html = "";
-      dates.forEach(function(d, idx) {
+      dates.forEach((d, idx) => {
         const val = values[idx];
         const heightPercent = Math.round((val / maxVal) * 100);
         const labelStr = d.slice(5);
@@ -1222,7 +1167,7 @@
       }
 
       let html = "";
-      users.forEach(function(u) {
+      users.forEach(u => {
         const isBanned = isUserBanned(u.name);
         const isAdminHiromu = (u.name.toLowerCase() === ADMIN_USER.toLowerCase());
 
@@ -1242,7 +1187,7 @@
         html += '    <strong>' + u.name + '</strong> ' + bannedTag;
         html += '  </div>';
         html += '  <div class="user-actions">';
-        html += '    <button onclick="adminLogoutUser(\'' + u.name + '\')" style="background:#718096;">ログアウト</button>';
+        html += '    <button onclick="adminLogoutUser(\'' + u.name + '\')" style="background:#718096;">強制ログアウト</button>';
         html += '    ' + banButtonHtml;
         html += '    <button onclick="adminShowUserInfo(\'' + u.name + '\')" style="background:#4D97FF;">情報</button>';
         html += '  </div>';
@@ -1258,7 +1203,8 @@
         closeAdminModal();
         showNotificationBanner("自分自身をログアウトさせました。", "info");
       } else {
-        showNotificationBanner(username + " をログアウト処理対象に設定しました。", "info");
+        setForceLogoutInDb(username);
+        showNotificationBanner(username + " を次回通信時に強制ログアウトさせるよう設定しました。", "info");
       }
     }
 
@@ -1281,13 +1227,8 @@
 
     async function adminShowUserInfo(username) {
       const users = getDbData("app_users", []);
-      const user = users.find(function(u) {
-        return u.name.toLowerCase() === username.toLowerCase();
-      });
-      let usageCount = 1;
-      if (user && user.count) {
-        usageCount = user.count;
-      }
+      const user = users.find(u => u.name.toLowerCase() === username.toLowerCase());
+      let usageCount = user && user.count ? user.count : 1;
 
       let msgCountText = "取得中...";
       try {
