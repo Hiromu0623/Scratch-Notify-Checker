@@ -64,13 +64,25 @@
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    #inline-notification-banner.success { background-color: var(--success-green); color: #FFFFFF; }
-    #inline-notification-banner.danger { background-color: var(--danger-color); color: #FFFFFF; }
-    #inline-notification-banner.info { background-color: var(--scratch-blue); color: #FFFFFF; }
+    #inline-notification-banner.success {
+      background-color: var(--success-green);
+      color: #FFFFFF;
+    }
+    #inline-notification-banner.danger {
+      background-color: var(--danger-color);
+      color: #FFFFFF;
+    }
+    #inline-notification-banner.info {
+      background-color: var(--scratch-blue);
+      color: #FFFFFF;
+    }
 
     #loading-overlay {
       position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: rgba(240, 244, 248, 0.95);
       z-index: 20000;
       display: flex;
@@ -83,7 +95,8 @@
       border: 5px solid #E2E8F0;
       border-top: 5px solid var(--scratch-blue);
       border-radius: 50%;
-      width: 50px; height: 50px;
+      width: 50px;
+      height: 50px;
       animation: spin 0.8s linear infinite;
       margin-bottom: 16px;
     }
@@ -100,152 +113,398 @@
       position: relative;
     }
 
-    .step-panel { display: none; }
+    .step-panel {
+      display: none;
+    }
     .step-panel.active {
       display: block;
       animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
-    h1, h2, h3 { margin-top: 0; }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
 
     input[type="text"], input[type="file"] {
-      width: 100%; padding: 12px 16px; border: 2px solid #E2E8F0;
-      border-radius: 8px; font-size: 16px; box-sizing: border-box; margin-bottom: 16px;
-      font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #E2E8F0;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     input[type="text"]:focus { 
-      border-color: var(--scratch-blue); outline: none; 
+      border-color: var(--scratch-blue);
+      outline: none; 
       box-shadow: 0 0 0 3px rgba(77, 151, 255, 0.2);
     }
 
     button {
-      width: 100%; background-color: var(--scratch-blue); color: white;
-      border: none; padding: 14px; border-radius: 8px; font-size: 16px;
-      font-weight: bold; cursor: pointer; font-family: inherit; margin-bottom: 8px;
+      width: 100%;
+      background-color: var(--scratch-blue);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+      margin-bottom: 8px;
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     button:hover { 
-      background-color: #3B82F6; transform: translateY(-2px);
+      background-color: #3B82F6;
+      transform: translateY(-2px);
       box-shadow: 0 6px 12px rgba(59, 130, 246, 0.25);
     }
-    button:active { transform: translateY(0) scale(0.98); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
-    .btn-cancel { background-color: var(--gray-btn); }
-    .btn-cancel:hover { background-color: #718096; box-shadow: 0 6px 12px rgba(113, 128, 150, 0.25); }
-
-    .code-container { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0; }
-    .code-box {
-      flex: 1; background: #EDF2F7; padding: 12px; border-radius: 8px; font-size: 20px;
-      font-weight: bold; letter-spacing: 2px; text-align: center; user-select: all; border: 2px dashed #CBD5E0;
+    button:active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .btn-copy { width: auto; padding: 12px 16px; margin-bottom: 0; }
+
+    .btn-cancel {
+      background-color: var(--gray-btn);
+    }
+    .btn-cancel:hover {
+      background-color: #718096;
+      box-shadow: 0 6px 12px rgba(113, 128, 150, 0.25);
+    }
+
+    .code-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .code-box {
+      flex: 1;
+      background: #EDF2F7;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-align: center;
+      user-select: all;
+      border: 2px dashed #CBD5E0;
+    }
+    .btn-copy {
+      width: auto;
+      padding: 12px 16px;
+      margin-bottom: 0;
+    }
 
     .toast-msg {
-      display: none; background-color: var(--success-green); color: white;
-      padding: 10px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 12px;
+      display: none;
+      background-color: var(--success-green);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
       animation: popIn 0.3s ease forwards;
     }
-    @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
 
     .timer-badge {
-      font-weight: bold; color: var(--danger-color); font-size: 18px; margin-bottom: 12px;
-      display: inline-block; padding: 4px 12px; background: rgba(255, 101, 101, 0.1); border-radius: 20px;
+      font-weight: bold;
+      color: var(--danger-color);
+      font-size: 18px;
+      margin-bottom: 12px;
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(255, 101, 101, 0.1);
+      border-radius: 20px;
     }
 
     .cf-box {
-      border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px;
-      text-align: center; background: #FAF5FF; margin-bottom: 16px;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      background: #FAF5FF;
+      margin-bottom: 16px;
     }
 
     .spinner {
-      border: 4px solid #E2E8F0; border-top: 4px solid var(--scratch-orange);
-      border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+      border: 4px solid #E2E8F0;
+      border-top: 4px solid var(--scratch-orange);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
 
     .msg-count-card {
       background: linear-gradient(135deg, var(--scratch-orange), #FF8C00);
-      color: white; text-align: center; border-radius: 12px; padding: 24px; margin-bottom: 24px;
+      color: white;
+      text-align: center;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
       box-shadow: 0 8px 16px rgba(255, 171, 25, 0.3);
     }
-    .msg-number { font-size: 64px; font-weight: 800; line-height: 1; margin: 8px 0; }
-    .settings-group { border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 16px; text-align: left; }
-    .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .error-text { color: var(--danger-color); font-size: 14px; text-align: center; margin-top: 8px; }
+    .msg-number {
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1;
+      margin: 8px 0;
+    }
+    .settings-group {
+      border-top: 1px solid #E2E8F0;
+      padding-top: 16px;
+      margin-top: 16px;
+      text-align: left;
+    }
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .error-text {
+      color: var(--danger-color);
+      font-size: 14px;
+      text-align: center;
+      margin-top: 8px;
+    }
 
     .admin-toggle-btn {
-      display: none; position: fixed; bottom: 20px; right: 20px; padding: 12px 20px;
-      border-radius: 30px; background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: white;
-      font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.39); z-index: 9999;
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 30px;
+      background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(109, 40, 217, 0.39);
+      z-index: 9999;
       transition: transform 0.2s;
     }
-    .admin-toggle-btn:hover { transform: scale(1.05); }
+    .admin-toggle-btn:hover {
+      transform: scale(1.05);
+    }
 
     .log-panel {
-      display: none; width: 100%; max-width: 480px; margin-top: 20px; background: #1A202C;
-      color: #00FF66; font-family: monospace; font-size: 12px; border-radius: 10px; padding: 12px;
-      box-sizing: border-box; height: 140px; overflow-y: auto; text-align: left;
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      margin-top: 20px;
+      background: #1A202C;
+      color: #00FF66;
+      font-family: monospace;
+      font-size: 12px;
+      border-radius: 10px;
+      padding: 12px;
+      box-sizing: border-box;
+      height: 140px;
+      overflow-y: auto;
+      text-align: left;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-    .log-panel.visible { display: block; animation: fadeIn 0.3s ease; }
-    .log-entry { margin-bottom: 4px; word-break: break-all; }
-    .log-entry.err { color: #FF6565; }
-    .log-entry.info { color: #63B3ED; }
+    .log-panel.visible {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+    .log-entry.err {
+      color: #FF6565;
+    }
+    .log-entry.info {
+      color: #63B3ED;
+    }
 
     .modal-overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;
-      padding: 20px; box-sizing: border-box;
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
     }
-    .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
+    .modal-overlay.active {
+      display: flex;
+      animation: fadeIn 0.2s ease;
+    }
     .modal-content {
-      background: white; border-radius: 16px; width: 100%; max-width: 520px; max-height: 85vh;
-      overflow-y: auto; padding: 24px; box-sizing: border-box; position: relative; text-align: left;
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-sizing: border-box;
+      position: relative;
+      text-align: left;
     }
     .modal-close-btn {
-      position: absolute; top: 16px; right: 16px; background: none; border: none;
-      font-size: 24px; cursor: pointer; color: #A0AEC0; width: auto; padding: 0; box-shadow: none;
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #A0AEC0;
+      width: auto;
+      padding: 0;
+      box-shadow: none;
     }
-    .modal-close-btn:hover { color: var(--text-color); background: none; transform: none; }
+    .modal-close-btn:hover {
+      color: var(--text-color);
+      background: none;
+      transform: none;
+    }
 
-    .admin-menu-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
-    .admin-subpanel { display: none; margin-top: 16px; border-top: 2px solid #EDF2F7; padding-top: 16px; }
-    .admin-subpanel.active { display: block; }
+    .admin-menu-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .admin-subpanel {
+      display: none;
+      margin-top: 16px;
+      border-top: 2px solid #EDF2F7;
+      padding-top: 16px;
+    }
+    .admin-subpanel.active {
+      display: block;
+    }
 
     .user-list-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px; background: #F7FAFC; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #F7FAFC;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #E2E8F0;
     }
-    .user-actions { display: flex; gap: 6px; align-items: center; }
-    .user-actions button { width: auto; padding: 6px 10px; font-size: 12px; margin: 0; }
+    .user-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .user-actions button {
+      width: auto;
+      padding: 6px 10px;
+      font-size: 12px;
+      margin: 0;
+    }
 
     .protected-badge {
-      font-size: 11px; font-weight: bold; color: #3182CE;
-      background: #EBF8FF; border: 1px solid #BEE3F8; padding: 4px 8px; border-radius: 6px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #3182CE;
+      background: #EBF8FF;
+      border: 1px solid #BEE3F8;
+      padding: 4px 8px;
+      border-radius: 6px;
     }
 
     .chart-container {
-      display: flex; align-items: flex-end; justify-content: space-around;
-      height: 160px; border-bottom: 2px solid #CBD5E0; padding-top: 20px; margin: 20px 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      height: 160px;
+      border-bottom: 2px solid #CBD5E0;
+      padding-top: 20px;
+      margin: 20px 0;
     }
-    .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
-    .chart-bar { width: 60%; background: var(--scratch-blue); border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; }
-    .chart-label { font-size: 10px; color: #718096; margin-top: 6px; }
-    .chart-value { font-size: 11px; font-weight: bold; margin-bottom: 4px; }
+    .chart-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .chart-bar {
+      width: 60%;
+      background: var(--scratch-blue);
+      border-radius: 4px 4px 0 0;
+      min-height: 4px;
+      transition: height 0.3s;
+    }
+    .chart-label {
+      font-size: 10px;
+      color: #718096;
+      margin-top: 6px;
+    }
+    .chart-value {
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
 
     #custom-context-menu {
-      display: none; position: absolute; z-index: 10000; background: #FFFFFF;
-      border: 1px solid #E2E8F0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 8px 0; min-width: 160px; text-align: left;
+      display: none;
+      position: absolute;
+      z-index: 10000;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 8px 0;
+      min-width: 160px;
+      text-align: left;
     }
-    #custom-context-menu div { padding: 8px 16px; font-size: 14px; color: var(--text-color); cursor: pointer; }
-    #custom-context-menu div:hover { background-color: #F7FAFC; color: var(--scratch-blue); }
+    #custom-context-menu div {
+      padding: 8px 16px;
+      font-size: 14px;
+      color: var(--text-color);
+      cursor: pointer;
+    }
+    #custom-context-menu div:hover {
+      background-color: #F7FAFC;
+      color: var(--scratch-blue);
+    }
   </style>
 </head>
 <body>
@@ -377,16 +636,24 @@
   </div>
 
   <script>
-    // ★★★ Firebaseの設定情報をここに貼り付けてください ★★★
+    // ★★★ 以下の firebaseConfig の中身を、Firebaseコンソールからコピーした実際の情報に置き換えてください ★★★
     const firebaseConfig = {
- 
+  apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
+  authDomain: "scratch-notify.firebaseapp.com",
+  databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
+  projectId: "scratch-notify",
+  storageBucket: "scratch-notify.firebasestorage.app",
+  messagingSenderId: "340553335348",
+  appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
+  measurementId: "G-2799DMKZTY"
 };
 
-    // Firebase 初期化
     let db = null;
     try {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
+      if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+      }
     } catch (e) {
       console.warn("FirebaseConfigが未設定のため、LocalStorageモードで動きます。");
     }
@@ -402,7 +669,7 @@
     let timeRemaining = 300;
     let currentMessageCount = null;
     let isWaitingForAuth = false;
-    let bannedCache = []; // BAN状態のキャッシュ
+    let bannedCache = [];
 
     function showNotificationBanner(msg, type = 'info', duration = 4000) {
       const banner = document.getElementById('inline-notification-banner');
@@ -410,26 +677,39 @@
       banner.className = type;
       banner.style.display = 'block';
 
-      if (window.inlineBannerTimer) clearTimeout(window.inlineBannerTimer);
+      if (window.inlineBannerTimer) {
+        clearTimeout(window.inlineBannerTimer);
+      }
       if (duration > 0) {
-        window.inlineBannerTimer = setTimeout(() => {
+        window.inlineBannerTimer = setTimeout(function() {
           banner.style.display = 'none';
         }, duration);
       }
     }
 
-    /* データベース抽象化レイヤー (Firebase ⇄ LocalStorage 自動切り替え) */
     function syncBannedList(callback) {
       if (db) {
-        db.ref("banned_users").on("value", (snapshot) => {
+        db.ref("banned_users").on("value", function(snapshot) {
           const val = snapshot.val();
-          bannedCache = val ? Object.values(val).map(v => String(v).toLowerCase()) : [];
-          if (callback) callback(bannedCache);
+          if (val) {
+            bannedCache = Object.values(val).map(function(v) {
+              return String(v).toLowerCase();
+            });
+          } else {
+            bannedCache = [];
+          }
+          if (callback) {
+            callback(bannedCache);
+          }
         });
       } else {
         const local = JSON.parse(localStorage.getItem("app_banned_users") || "[]");
-        bannedCache = local.map(v => String(v).toLowerCase());
-        if (callback) callback(bannedCache);
+        bannedCache = local.map(function(v) {
+          return String(v).toLowerCase();
+        });
+        if (callback) {
+          callback(bannedCache);
+        }
       }
     }
 
@@ -444,9 +724,13 @@
       } else {
         let local = JSON.parse(localStorage.getItem("app_banned_users") || "[]");
         if (isBanned) {
-          if (!local.includes(lower)) local.push(lower);
+          if (!local.includes(lower)) {
+            local.push(lower);
+          }
         } else {
-          local = local.filter(u => u !== lower);
+          local = local.filter(function(u) {
+            return u !== lower;
+          });
         }
         localStorage.setItem("app_banned_users", JSON.stringify(local));
         bannedCache = local;
@@ -454,23 +738,36 @@
     }
 
     function isUserBanned(username) {
-      if (!username) return false;
-      return bannedCache.includes(username.toLowerCase());
+      if (!username) {
+        return false;
+      }
+      return bannedCache.includes(String(username).toLowerCase());
     }
 
     function getDbData(key, defaultVal) {
       const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : defaultVal;
+      if (data) {
+        return JSON.parse(data);
+      } else {
+        return defaultVal;
+      }
     }
+
     function setDbData(key, val) {
       localStorage.setItem(key, JSON.stringify(val));
     }
 
     function registerUserRecord(username) {
       let users = getDbData("app_users", []);
-      let existing = users.find(u => u.name.toLowerCase() === username.toLowerCase());
+      let existing = users.find(function(u) {
+        return u.name.toLowerCase() === username.toLowerCase();
+      });
       if (!existing) {
-        users.push({ name: username, regDate: new Date().toLocaleString(), count: 1 });
+        users.push({
+          name: username,
+          regDate: new Date().toLocaleString(),
+          count: 1
+        });
       } else {
         existing.count = (existing.count || 0) + 1;
       }
@@ -489,32 +786,35 @@
       document.getElementById("sys-log").classList.toggle("visible");
     }
 
-    function log(msg, type = "normal") {
+    function log(msg, type) {
+      if (!type) {
+        type = "normal";
+      }
       const logBox = document.getElementById("sys-log");
       const entry = document.createElement("div");
       const timeStr = new Date().toLocaleTimeString();
-      entry.className = `log-entry ${type}`;
-      entry.textContent = `[${timeStr}] ${msg}`;
+      entry.className = "log-entry " + type;
+      entry.textContent = "[" + timeStr + "] " + msg;
       logBox.appendChild(entry);
       logBox.scrollTop = logBox.scrollHeight;
     }
 
-    window.addEventListener("DOMContentLoaded", () => {
+    window.addEventListener("DOMContentLoaded", function() {
       log("アプリケーションの初期化を行っています...");
 
-      // BANリストのリアルタイム同期を開始
-      syncBannedList((list) => {
-        // ログイン中に自分がBANされた場合の即時ログアウト処理
+      syncBannedList(function(list) {
         if (targetUsername && isUserBanned(targetUsername)) {
           showNotificationBanner("🚫 あなたのアカウントはBANされました。", "danger", 5000);
           logout();
         }
       });
       
-      setTimeout(() => {
+      setTimeout(function() {
         const overlay = document.getElementById("loading-overlay");
         overlay.style.opacity = "0";
-        setTimeout(() => overlay.style.display = "none", 300);
+        setTimeout(function() {
+          overlay.style.display = "none";
+        }, 300);
       }, 600);
 
       const savedUser = localStorage.getItem("scratch_user");
@@ -525,82 +825,27 @@
           return;
         }
         targetUsername = savedUser;
-        log(`保存されたユーザー情報を検出: ${savedUser}`, "info");
+        log("保存されたユーザー情報を検出: " + savedUser, "info");
         initDashboard();
       }
     });
 
     const usernameInput = document.getElementById("username-input");
-    usernameInput.addEventListener("input", function () {
+    usernameInput.addEventListener("input", function() {
       this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
     });
-    usernameInput.addEventListener("keypress", function (e) {
+    usernameInput.addEventListener("keypress", function(e) {
       if (e.key === "Enter") {
         e.preventDefault();
         startVerification();
       }
     });
 
-    window.addEventListener("keydown", function (e) {
-      if (
-        e.keyCode === 123 || 
-        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || 
-        (e.ctrlKey && e.keyCode === 85)
-      ) {
-        e.preventDefault();
-        log("DevToolsアクセスキーが検出されました。", "err");
-        showNotificationBanner("セキュリティ上の理由により制限されています。", "danger");
-        location.reload();
-      }
-    });
-
-    function detectDevTools() {
-      const threshold = 160;
-      if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
-        showNotificationBanner("開発者ツールが検出されました。再読み込みします。", "danger");
-        location.reload();
-      }
-    }
-    window.addEventListener("resize", detectDevTools);
-    setInterval(detectDevTools, 1000);
-
-    const contextMenu = document.getElementById("custom-context-menu");
-    document.addEventListener("contextmenu", function (e) {
-      e.preventDefault();
-      const selectedText = window.getSelection().toString();
-      let menuHtml = "";
-      if (selectedText.length > 0) {
-        menuHtml += `<div onclick="document.execCommand('copy')">📋 コピー</div>`;
-      }
-      menuHtml += `
-        <div onclick="document.execCommand('selectAll')">🟦 すべてを選択</div>
-        <div onclick="location.reload()">🔄 再読み込み</div>
-      `;
-      contextMenu.innerHTML = menuHtml;
-      contextMenu.style.left = `${e.pageX}px`;
-      contextMenu.style.top = `${e.pageY}px`;
-      contextMenu.style.display = "block";
-    });
-    document.addEventListener("click", () => contextMenu.style.display = "none");
-
-    window.addEventListener("beforeunload", function (e) {
-      if (isWaitingForAuth) {
-        e.preventDefault();
-        e.returnValue = "コードの認証待機中です。本当にページを離れますか？";
-      }
-    });
-
-    function generateUniqueCode() {
-      const timePart = Date.now().toString(36).slice(-4).toUpperCase();
-      const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
-      authCode = `VERIFY-${timePart}${randPart}`;
-      log(`一意の認証コードを生成: ${authCode}`, "info");
-      return authCode;
-    }
-
     function resetTurnstile() {
       if (window.turnstile) {
-        try { window.turnstile.reset("#turnstile-container"); } catch (e) {}
+        try {
+          window.turnstile.reset("#turnstile-container");
+        } catch (e) {}
       }
     }
 
@@ -621,43 +866,57 @@
 
       showError("err-step1", "");
       targetUsername = input;
-      log(`対象ユーザー名セット: ${targetUsername}`);
+      log("対象ユーザー名セット: " + targetUsername);
       resetTurnstile();
       showStep(2);
     }
 
     function onTurnstileSuccess(token) {
-      if (!token || !targetUsername) return;
+      if (!token || !targetUsername) {
+        return;
+      }
       log("Cloudflare Turnstile セキュリティ認証成功", "info");
       generateUniqueCode();
       document.getElementById("auth-code-display").textContent = authCode;
       
-      setTimeout(() => {
+      setTimeout(function() {
         showStep(3);
         startTimer();
         startBioPolling();
       }, 300);
     }
 
+    function generateUniqueCode() {
+      const timePart = Date.now().toString(36).slice(-4).toUpperCase();
+      const randPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+      authCode = "VERIFY-" + timePart + randPart;
+      log("一意の認証コードを生成: " + authCode, "info");
+      return authCode;
+    }
+
     function copyAuthCode() {
-      navigator.clipboard.writeText(authCode).then(() => {
+      navigator.clipboard.writeText(authCode).then(function() {
         log("認証コードをコピーしました。");
         const toast = document.getElementById("copy-toast");
         toast.style.display = "block";
-        setTimeout(() => { toast.style.display = "none"; }, 3000);
+        setTimeout(function() {
+          toast.style.display = "none";
+        }, 3000);
       });
     }
 
     function openScratchProfile() {
-      window.open(`https://scratch.mit.edu/users/${targetUsername}/`, "_blank");
+      window.open("https://scratch.mit.edu/users/" + targetUsername + "/", "_blank");
     }
 
     function startTimer() {
-      if (timerInterval) clearInterval(timerInterval);
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
       timeRemaining = 300;
       updateTimerDisplay();
 
-      timerInterval = setInterval(() => {
+      timerInterval = setInterval(function() {
         timeRemaining--;
         updateTimerDisplay();
         if (timeRemaining <= 0) {
@@ -672,7 +931,7 @@
       const minutes = Math.floor(timeRemaining / 60);
       const seconds = timeRemaining % 60;
       document.getElementById("timer-display").textContent = 
-        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0');
     }
 
     function playSuccessSound() {
@@ -703,23 +962,32 @@
     }
 
     function startBioPolling() {
-      if (checkInterval) clearInterval(checkInterval);
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
       isWaitingForAuth = true;
       log("プロフィールの「私について」監視を開始...", "info");
 
-      checkInterval = setInterval(async () => {
+      checkInterval = setInterval(async function() {
         try {
-          const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}?_=${Date.now()}`;
+          const targetUrl = "https://api.scratch.mit.edu/users/" + targetUsername + "?_=" + Date.now();
           const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
-          if (!res.ok) return;
+          if (!res.ok) {
+            return;
+          }
           
           const userData = await res.json();
-          const bioText = userData.profile ? userData.profile.bio : "";
+          let bioText = "";
+          if (userData.profile) {
+            bioText = userData.profile.bio;
+          }
 
           if (bioText && bioText.includes(authCode)) {
             log("認証コードの記述を検出！認証完了！", "info");
             clearInterval(checkInterval);
-            if (timerInterval) clearInterval(timerInterval);
+            if (timerInterval) {
+              clearInterval(timerInterval);
+            }
             isWaitingForAuth = false;
 
             playSuccessSound();
@@ -730,14 +998,18 @@
             initDashboard();
           }
         } catch (err) {
-          log(`エラー発生: ${err.message}`, "err");
+          log("エラー発生: " + err.message, "err");
         }
       }, 3000);
     }
 
     function cancelVerification() {
-      if (checkInterval) clearInterval(checkInterval);
-      if (timerInterval) clearInterval(timerInterval);
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
       isWaitingForAuth = false;
       targetUsername = "";
       usernameInput.value = "";
@@ -748,8 +1020,8 @@
     function initDashboard() {
       isWaitingForAuth = false;
       showStep(4);
-      document.getElementById("welcome-msg").textContent = `${targetUsername} の通知状況`;
-      log(`ダッシュボード表示: ${targetUsername}`, "info");
+      document.getElementById("welcome-msg").textContent = targetUsername + " の通知状況";
+      log("ダッシュボード表示: " + targetUsername, "info");
 
       const adminBtn = document.getElementById("admin-btn");
       if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
@@ -761,26 +1033,30 @@
       }
 
       updateMessageCount();
-      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+      if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+      }
       autoUpdateInterval = setInterval(updateMessageCount, 10000);
     }
 
-    /* 修正済みの通知数更新関数 */
     async function updateMessageCount() {
-      // 厳密なBAN判定（誤作動防止）
-      if (targetUsername && isUserBanned(targetUsername)) {
+      if (!targetUsername) {
+        return;
+      }
+
+      if (isUserBanned(targetUsername)) {
         showNotificationBanner("🚫 このアカウントは管理者によりBANされました。", "danger", 5000);
         logout();
         return;
       }
 
       try {
-        const targetUrl = `https://api.scratch.mit.edu/users/${targetUsername}/messages/count?_=${Date.now()}`;
+        const targetUrl = "https://api.scratch.mit.edu/users/" + targetUsername + "/messages/count?_=" + Date.now();
         const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl), { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           const count = data.count;
-          log(`未読通知数更新: ${count} 件`);
+          log("未読通知数更新: " + count + " 件");
 
           if (currentMessageCount !== null && count > currentMessageCount) {
             playNotificationSound();
@@ -789,12 +1065,14 @@
           document.getElementById("msg-count").textContent = count;
         }
       } catch (err) {
-        log(`通知数取得エラー: ${err.message}`, "err");
+        log("通知数取得通信エラー（画面維持）: " + err.message, "err");
       }
     }
 
     function playNotificationSound() {
-      if (!document.getElementById("audio-toggle").checked) return;
+      if (!document.getElementById("audio-toggle").checked) {
+        return;
+      }
       const fileInput = document.getElementById("sound-file");
       
       if (fileInput.files && fileInput.files[0]) {
@@ -820,11 +1098,16 @@
       }
     }
 
-    function testSound() { playNotificationSound(); }
+    function testSound() {
+      playNotificationSound();
+    }
 
     function showStep(stepNum) {
-      document.querySelectorAll(".step-panel").forEach(panel => panel.classList.remove("active"));
-      document.getElementById(`step-${stepNum}`).classList.add("active");
+      const panels = document.querySelectorAll(".step-panel");
+      panels.forEach(function(panel) {
+        panel.classList.remove("active");
+      });
+      document.getElementById("step-" + stepNum).classList.add("active");
     }
 
     function showError(elementId, msg) {
@@ -832,9 +1115,15 @@
     }
 
     function logout() {
-      if (checkInterval) clearInterval(checkInterval);
-      if (timerInterval) clearInterval(timerInterval);
-      if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+      if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+      }
       
       localStorage.removeItem("scratch_user");
       currentMessageCount = null;
@@ -848,7 +1137,6 @@
       showStep(1);
     }
 
-    /* 管理者メニュー機能 */
     function openAdminModal() {
       document.getElementById("admin-modal").classList.add("active");
       log("管理者モーダルを開きました。");
@@ -859,12 +1147,21 @@
     }
 
     function showAdminSubpanel(panelId) {
-      document.querySelectorAll(".admin-subpanel").forEach(p => p.classList.remove("active"));
+      const subpanels = document.querySelectorAll(".admin-subpanel");
+      subpanels.forEach(function(p) {
+        p.classList.remove("active");
+      });
       document.getElementById(panelId).classList.add("active");
 
-      if (panelId === 'sub-users') renderRegisteredUsers();
-      if (panelId === 'sub-usage') renderUsageChart();
-      if (panelId === 'sub-manage') renderAccountManagement();
+      if (panelId === 'sub-users') {
+        renderRegisteredUsers();
+      }
+      if (panelId === 'sub-usage') {
+        renderUsageChart();
+      }
+      if (panelId === 'sub-manage') {
+        renderAccountManagement();
+      }
     }
 
     function renderRegisteredUsers() {
@@ -874,14 +1171,16 @@
         container.innerHTML = "<p style='font-size:13px; color:#718096;'>登録されているユーザーはいません。</p>";
         return;
       }
-      container.innerHTML = users.map(u => `
-        <div class="user-list-item">
-          <div>
-            <strong>${u.name}</strong>
-            <div style="font-size:10px; color:#718096;">登録日時: ${u.regDate || '不明'}</div>
-          </div>
-        </div>
-      `).join('');
+      let html = "";
+      users.forEach(function(u) {
+        html += '<div class="user-list-item">';
+        html += '  <div>';
+        html += '    <strong>' + u.name + '</strong>';
+        html += '    <div style="font-size:10px; color:#718096;">登録日時: ' + (u.regDate || '不明') + '</div>';
+        html += '  </div>';
+        html += '</div>';
+      });
+      container.innerHTML = html;
     }
 
     function renderUsageChart() {
@@ -894,21 +1193,23 @@
         dates.push(d.toISOString().split('T')[0]);
       }
 
-      const values = dates.map(d => usage[d] || 0);
+      const values = dates.map(function(d) {
+        return usage[d] || 0;
+      });
       const maxVal = Math.max(...values, 5);
 
-      container.innerHTML = dates.map((d, idx) => {
+      let html = "";
+      dates.forEach(function(d, idx) {
         const val = values[idx];
         const heightPercent = Math.round((val / maxVal) * 100);
         const labelStr = d.slice(5);
-        return `
-          <div class="chart-bar-wrap">
-            <div class="chart-value">${val}</div>
-            <div class="chart-bar" style="height: ${heightPercent}%;"></div>
-            <div class="chart-label">${labelStr}</div>
-          </div>
-        `;
-      }).join('');
+        html += '<div class="chart-bar-wrap">';
+        html += '  <div class="chart-value">' + val + '</div>';
+        html += '  <div class="chart-bar" style="height: ' + heightPercent + '%;"></div>';
+        html += '  <div class="chart-label">' + labelStr + '</div>';
+        html += '</div>';
+      });
+      container.innerHTML = html;
     }
 
     function renderAccountManagement() {
@@ -920,34 +1221,35 @@
         return;
       }
 
-      container.innerHTML = users.map(u => {
+      let html = "";
+      users.forEach(function(u) {
         const isBanned = isUserBanned(u.name);
         const isAdminHiromu = (u.name.toLowerCase() === ADMIN_USER.toLowerCase());
 
         let banButtonHtml = '';
         if (isAdminHiromu) {
-          banButtonHtml = `<span class="protected-badge">[管理者保護]</span>`;
+          banButtonHtml = '<span class="protected-badge">[管理者保護]</span>';
         } else {
-          banButtonHtml = `
-            <button onclick="adminToggleBan('${u.name}')" style="background:${isBanned ? '#48BB78' : '#FF6565'};">
-              ${isBanned ? 'BAN解除' : 'BAN'}
-            </button>
-          `;
+          const btnColor = isBanned ? '#48BB78' : '#FF6565';
+          const btnText = isBanned ? 'BAN解除' : 'BAN';
+          banButtonHtml = '<button onclick="adminToggleBan(\'' + u.name + '\')" style="background:' + btnColor + ';">' + btnText + '</button>';
         }
 
-        return `
-          <div class="user-list-item">
-            <div>
-              <strong>${u.name}</strong> ${isBanned ? '<span style="color:red; font-size:10px;">[BAN中]</span>' : ''}
-            </div>
-            <div class="user-actions">
-              <button onclick="adminLogoutUser('${u.name}')" style="background:#718096;">ログアウト</button>
-              ${banButtonHtml}
-              <button onclick="adminShowUserInfo('${u.name}')" style="background:#4D97FF;">情報</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+        const bannedTag = isBanned ? '<span style="color:red; font-size:10px;">[BAN中]</span>' : '';
+
+        html += '<div class="user-list-item">';
+        html += '  <div>';
+        html += '    <strong>' + u.name + '</strong> ' + bannedTag;
+        html += '  </div>';
+        html += '  <div class="user-actions">';
+        html += '    <button onclick="adminLogoutUser(\'' + u.name + '\')" style="background:#718096;">ログアウト</button>';
+        html += '    ' + banButtonHtml;
+        html += '    <button onclick="adminShowUserInfo(\'' + u.name + '\')" style="background:#4D97FF;">情報</button>';
+        html += '  </div>';
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
     }
 
     function adminLogoutUser(username) {
@@ -956,7 +1258,7 @@
         closeAdminModal();
         showNotificationBanner("自分自身をログアウトさせました。", "info");
       } else {
-        showNotificationBanner(`${username} をログアウト処理対象に設定しました。`, "info");
+        showNotificationBanner(username + " をログアウト処理対象に設定しました。", "info");
       }
     }
 
@@ -970,25 +1272,30 @@
       setBannedUserInDb(username, !isBanned);
 
       if (!isBanned) {
-        showNotificationBanner(`${username} をBANしました。`, "danger");
+        showNotificationBanner(username + " をBANしました。", "danger");
       } else {
-        showNotificationBanner(`${username} のBANを解除しました。`, "success");
+        showNotificationBanner(username + " のBANを解除しました。", "success");
       }
       renderAccountManagement();
     }
 
     async function adminShowUserInfo(username) {
       const users = getDbData("app_users", []);
-      const user = users.find(u => u.name.toLowerCase() === username.toLowerCase());
-      const usageCount = user ? (user.count || 1) : 1;
+      const user = users.find(function(u) {
+        return u.name.toLowerCase() === username.toLowerCase();
+      });
+      let usageCount = 1;
+      if (user && user.count) {
+        usageCount = user.count;
+      }
 
       let msgCountText = "取得中...";
       try {
-        const targetUrl = `https://api.scratch.mit.edu/users/${username}/messages/count?_=${Date.now()}`;
+        const targetUrl = "https://api.scratch.mit.edu/users/" + username + "/messages/count?_=" + Date.now();
         const res = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
         if (res.ok) {
           const data = await res.json();
-          msgCountText = `${data.count} 件`;
+          msgCountText = data.count + " 件";
         } else {
           msgCountText = "取得失敗";
         }
@@ -996,7 +1303,7 @@
         msgCountText = "エラー";
       }
 
-      showNotificationBanner(`【ユーザー情報】 ユーザー名: ${username} / 利用回数: ${usageCount}回 / 未読数: ${msgCountText}`, "info", 6000);
+      showNotificationBanner("【ユーザー情報】 ユーザー名: " + username + " / 利用回数: " + usageCount + "回 / 未読数: " + msgCountText, "info", 6000);
     }
   </script>
 </body>
