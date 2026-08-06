@@ -74,12 +74,14 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(240, 244, 248, 0.95);
+      background: rgba(240, 244, 248, 0.98);
       z-index: 20000;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
       transition: opacity 0.3s ease;
     }
     .loading-spinner {
@@ -90,6 +92,21 @@
       height: 50px;
       animation: spin 0.8s linear infinite;
       margin-bottom: 16px;
+    }
+
+    /* ローディング遅延時のエラー案内エリア */
+    #loading-timeout-msg {
+      display: none;
+      width: 100%;
+      max-width: 460px;
+      background: #FFF5F5;
+      border: 1px solid #FEB2B2;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+      box-sizing: border-box;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
     }
 
     .container {
@@ -288,7 +305,6 @@
       margin-top: 8px;
     }
 
-    /* お知らせエリア (折りたたみアコーディオン形式) */
     .news-container {
       width: 100%;
       max-width: 480px;
@@ -370,9 +386,7 @@
       border-top: 1px dashed #E2E8F0;
       animation: fadeIn 0.2s ease;
     }
-    .news-content.open {
-      display: block;
-    }
+    .news-content.open { display: block; }
 
     .admin-toggle-btn {
       display: none;
@@ -395,7 +409,7 @@
       display: none;
       width: 100%;
       max-width: 480px;
-      margin-top: 20px;
+      margin-top: 12px;
       background: #1A202C;
       color: #00FF66;
       font-family: monospace;
@@ -480,7 +494,6 @@
       border: 1px solid #BEE3F8; padding: 4px 8px; border-radius: 6px;
     }
 
-    /* 棒グラフ用スタイル */
     .chart-container {
       display: flex;
       align-items: flex-end;
@@ -525,9 +538,21 @@
 
   <div id="inline-notification-banner"></div>
 
+  <!-- フル画面ローディング画面 -->
   <div id="loading-overlay">
     <div class="loading-spinner"></div>
     <div style="font-weight: bold; color: #4A5568;">読み込み中...</div>
+    
+    <!-- 10秒経過時に自動表示されるメッセージ ＆ ログエリア -->
+    <div id="loading-timeout-msg">
+      <div style="font-weight:bold; color:var(--danger-color); font-size:14px; margin-bottom:4px;">
+        ⚠️ 読み込みの時間が長いです。
+      </div>
+      <div style="font-size:12px; color:#4A5568; margin-bottom:8px;">
+        ログを確認してエラーが発生してたら主に報告してください。
+      </div>
+      <div class="log-panel visible" id="loading-sys-log" style="height:120px; max-width:100%;"></div>
+    </div>
   </div>
 
   <div class="admin-toggle-btn" id="admin-btn" onclick="openAdminModal()">⚙️ 管理者メニュー</div>
@@ -670,7 +695,7 @@
   </div>
 
   <script>
-    const firebaseConfig = {
+   const firebaseConfig = {
   apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
   authDomain: "scratch-notify.firebaseapp.com",
   databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
@@ -681,7 +706,6 @@
   measurementId: "G-2799DMKZTY"
 };
 
-    };
 
     let db = null;
     try {
@@ -708,6 +732,9 @@
     let globalAudioPlayer = null;
     let sessionRef = null;
     let currentStep = 1;
+
+    // 10秒自動検出用タイマー変数
+    let loadingTimeoutTimer = null;
 
     function openAudioDB() {
       return new Promise(function(resolve, reject) {
@@ -798,7 +825,6 @@
       } catch (e) {}
     }
 
-    // アクセスカウントの自動加算処理
     async function recordPageVisit() {
       if (!db) return;
       const today = new Date().toISOString().split('T')[0];
@@ -814,7 +840,6 @@
       }
     }
 
-    // お知らせの読込 ＆ アコーディオン生成
     async function loadNews() {
       const newsListContainer = document.getElementById("news-list");
       try {
@@ -850,7 +875,6 @@
       }
     }
 
-    // お知らせ詳細の開閉切替
     function toggleNewsContent(contentId, btnId) {
       const contentElem = document.getElementById(contentId);
       const btnElem = document.getElementById(btnId);
@@ -885,15 +909,29 @@
       }
     }
 
+    // ログ記録（メインログとローディング用ログ両方に書き込み）
     function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
-      if (!logBox) return;
-      const entry = document.createElement("div");
+      const loadingLogBox = document.getElementById("loading-sys-log");
+
       const timeStr = new Date().toLocaleTimeString();
-      entry.className = "log-entry " + type;
-      entry.textContent = "[" + timeStr + "] " + msg;
-      logBox.appendChild(entry);
-      logBox.scrollTop = logBox.scrollHeight;
+      const entryText = "[" + timeStr + "] " + msg;
+
+      if (logBox) {
+        const entry = document.createElement("div");
+        entry.className = "log-entry " + type;
+        entry.textContent = entryText;
+        logBox.appendChild(entry);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      if (loadingLogBox) {
+        const entry2 = document.createElement("div");
+        entry2.className = "log-entry " + type;
+        entry2.textContent = entryText;
+        loadingLogBox.appendChild(entry2);
+        loadingLogBox.scrollTop = loadingLogBox.scrollHeight;
+      }
     }
 
     async function checkUserLoggedIn(user) {
@@ -913,10 +951,26 @@
       }
     }
 
+    // ローディング開始時：10秒監視タイマーのセット
+    function startLoadingTimeoutWatch() {
+      const msgBox = document.getElementById("loading-timeout-msg");
+      if (msgBox) msgBox.style.display = "none";
+
+      if (loadingTimeoutTimer) clearTimeout(loadingTimeoutTimer);
+
+      loadingTimeoutTimer = setTimeout(function() {
+        if (msgBox) {
+          msgBox.style.display = "block";
+          log("読み込み時間が10秒を超過しました。ログを確認してください。", "err");
+        }
+      }, 10000);
+    }
+
     window.addEventListener("DOMContentLoaded", async function() {
       log("初期化処理中...");
+      startLoadingTimeoutWatch(); // 10秒監視開始
+
       recordPageVisit();
-      const forceHideTimer = setTimeout(hideLoadingOverlay, 1200);
 
       try {
         await loadCustomSound();
@@ -935,16 +989,23 @@
       } catch (err) {
         log("初期化エラー: " + err.message, "err");
       } finally {
-        clearTimeout(forceHideTimer);
         hideLoadingOverlay();
       }
     });
 
+    // 読み込み完了時：ローディング画面とタイマー・案内文を削除
     function hideLoadingOverlay() {
+      if (loadingTimeoutTimer) clearTimeout(loadingTimeoutTimer);
+
       const overlay = document.getElementById("loading-overlay");
+      const msgBox = document.getElementById("loading-timeout-msg");
+
       if (overlay) {
         overlay.style.opacity = "0";
-        setTimeout(function() { overlay.style.display = "none"; }, 300);
+        setTimeout(function() {
+          overlay.style.display = "none";
+          if (msgBox) msgBox.style.display = "none";
+        }, 300);
       }
     }
 
@@ -1158,7 +1219,6 @@
       } catch (err) {}
     }
 
-   // 強化版：音声再生処理（自動再生制限の回避 ＆ フォールバック）
     function playAudioSource(srcUrl) {
       if (!globalAudioPlayer) {
         globalAudioPlayer = new Audio();
@@ -1173,8 +1233,7 @@
         playPromise.then(function() {
           log("通知音を再生しました", "info");
         }).catch(function(e) {
-          log("音声再生が制限されたかファイルが見つかりません: " + e.message, "err");
-          // ファイル読み込みや自動再生に失敗した場合は合成ビープ音を再生
+          log("音声再生制限またはファイル不備のためビープ音を再生: " + e.message, "info");
           playBeepSound();
         });
       }
@@ -1308,7 +1367,6 @@
       container.innerHTML = html;
     }
 
-    // アクセス統計および動的棒グラフの生成
     async function renderUsageChart() {
       const container = document.getElementById("usage-chart");
       const totalViewsElem = document.getElementById("total-views-count");
@@ -1320,11 +1378,9 @@
       }
 
       try {
-        // 累計アクセス数
         const totalSnap = await db.ref("stats/total_visits").get();
         totalViewsElem.textContent = (totalSnap.exists() ? totalSnap.val() : 0).toLocaleString() + " 回";
 
-        // 過去7日間の日付
         const dates = [];
         for (let i = 6; i >= 0; i--) {
           const d = new Date();
