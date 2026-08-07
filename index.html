@@ -42,7 +42,7 @@
       min-height: 100vh;
       margin: 0;
       padding: 40px 20px;
-      user-select: text; /* 選択可能に設定 */
+      user-select: text;
       box-sizing: border-box;
       position: relative;
     }
@@ -51,7 +51,7 @@
     #custom-context-menu {
       display: none;
       position: fixed;
-      z-index: 50000;
+      z-index: 100000;
       background: #FFFFFF;
       border: 1px solid #E2E8F0;
       border-radius: 12px;
@@ -716,7 +716,7 @@
     </div>
   </div>
 
-  <!-- お知らせ領域 (アコーディオン仕様) -->
+  <!-- お知らせ領域 -->
   <div class="news-container">
     <div class="news-header-box">
       <div class="news-title">📢 お知らせ・更新情報</div>
@@ -811,28 +811,35 @@
   </div>
 
   <script>
-    // --- 1. カスタム右クリックメニュー設定 ---
-    const customMenu = document.getElementById('custom-context-menu');
+    // --- 1. カスタム右クリック & F12のイベント登録 (最優先処理) ---
+    window.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      const customMenu = document.getElementById('custom-context-menu');
+      if (customMenu) {
+        customMenu.style.left = e.clientX + 'px';
+        customMenu.style.top = e.clientY + 'px';
+        customMenu.style.display = 'block';
+      }
+    }, true);
 
-    document.addEventListener('contextmenu', function(e) {
-      e.preventDefault(); // デフォルトの右クリックメニューを隠す
-      
-      const posX = e.clientX;
-      const posY = e.clientY;
-
-      customMenu.style.left = posX + 'px';
-      customMenu.style.top = posY + 'px';
-      customMenu.style.display = 'block';
-    });
-
-    document.addEventListener('click', function(e) {
-      if (!customMenu.contains(e.target)) {
+    window.addEventListener('click', function(e) {
+      const customMenu = document.getElementById('custom-context-menu');
+      if (customMenu && !customMenu.contains(e.target)) {
         customMenu.style.display = 'none';
       }
     });
 
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'F12' || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
+        openF12Modal();
+      }
+    }, true);
+
     function customSelectAll() {
-      customMenu.style.display = 'none';
+      const customMenu = document.getElementById('custom-context-menu');
+      if (customMenu) customMenu.style.display = 'none';
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(document.body);
@@ -842,7 +849,8 @@
     }
 
     function customCopy() {
-      customMenu.style.display = 'none';
+      const customMenu = document.getElementById('custom-context-menu');
+      if (customMenu) customMenu.style.display = 'none';
       const selectedText = window.getSelection().toString();
       if (selectedText) {
         navigator.clipboard.writeText(selectedText).then(function() {
@@ -853,30 +861,23 @@
       }
     }
 
-    // --- 2. カスタムF12画面の設定 ---
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'F12' || e.keyCode === 123) {
-        e.preventDefault();
-        openF12Modal();
-      }
-    });
-
     function openF12Modal() {
       const f12Log = document.getElementById("f12-console-log");
       const sysLog = document.getElementById("sys-log");
       if (f12Log && sysLog) {
         f12Log.innerHTML = sysLog.innerHTML;
       }
-      document.getElementById("f12-modal").classList.add("active");
+      const modal = document.getElementById("f12-modal");
+      if (modal) modal.classList.add("active");
     }
 
     function closeF12Modal() {
-      document.getElementById("f12-modal").classList.remove("active");
+      const modal = document.getElementById("f12-modal");
+      if (modal) modal.classList.remove("active");
     }
 
     // --- Firebase & 本体システム ---
     const firebaseConfig = {
-      const firebaseConfig = {
   apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
   authDomain: "scratch-notify.firebaseapp.com",
   databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
@@ -886,8 +887,6 @@
   appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
   measurementId: "G-2799DMKZTY"
 };
-    };
-
     let db = null;
     try {
       if (window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -975,14 +974,15 @@
       const statusElem = document.getElementById("custom-sound-status");
 
       if (file) {
-        nameElem.textContent = file.name || "カスタム音源";
-        sizeElem.textContent = formatBytes(file.size);
-        detailsContainer.style.display = "block";
-        statusElem.textContent = "🎵 保存されたカスタム通知音を使用中";
+        if (nameElem) nameElem.textContent = file.name || "カスタム音源";
+        if (sizeElem) sizeElem.textContent = formatBytes(file.size);
+        if (detailsContainer) detailsContainer.style.display = "block";
+        if (statusElem) statusElem.textContent = "🎵 保存されたカスタム通知音を使用中";
       } else {
-        detailsContainer.style.display = "none";
-        statusElem.textContent = "";
-        document.getElementById("sound-file").value = "";
+        if (detailsContainer) detailsContainer.style.display = "none";
+        if (statusElem) statusElem.textContent = "";
+        const fileInput = document.getElementById("sound-file");
+        if (fileInput) fileInput.value = "";
       }
     }
 
@@ -1035,7 +1035,9 @@
             log("IndexedDBからカスタム通知音を読み込みました", "info");
           }
         };
-      } catch (e) {}
+      } catch (e) {
+        log("カスタム通知音のロード処理スキップ", "info");
+      }
     }
 
     async function recordPageVisit() {
@@ -1053,6 +1055,8 @@
 
     async function loadNews() {
       const newsListContainer = document.getElementById("news-list");
+      if (!newsListContainer) return;
+
       try {
         const res = await fetch("info.json?_=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("info.json取得失敗");
@@ -1088,14 +1092,14 @@
       const btnText = document.getElementById("news-btn-text");
       const arrow = document.getElementById("news-arrow");
 
-      if (wrapper.classList.contains("open")) {
+      if (wrapper && wrapper.classList.contains("open")) {
         wrapper.classList.remove("open");
-        btnText.textContent = "詳細を表示";
-        arrow.classList.remove("rotated");
-      } else {
+        if (btnText) btnText.textContent = "詳細を表示";
+        if (arrow) arrow.classList.remove("rotated");
+      } else if (wrapper) {
         wrapper.classList.add("open");
-        btnText.textContent = "詳細を隠す";
-        arrow.classList.add("rotated");
+        if (btnText) btnText.textContent = "詳細を隠す";
+        if (arrow) arrow.classList.add("rotated");
       }
     }
 
@@ -1108,6 +1112,7 @@
 
     function showNotificationBanner(msg, type = 'info', duration = 4000) {
       const banner = document.getElementById('inline-notification-banner');
+      if (!banner) return;
       banner.textContent = msg;
       banner.className = type;
       banner.style.display = 'block';
@@ -1169,15 +1174,13 @@
     }
 
     function startLoadingTimeoutWatch() {
-      const msgBox = document.getElementById("loading-timeout-msg");
-      if (msgBox) msgBox.style.display = "none";
-
       if (loadingTimeoutTimer) clearTimeout(loadingTimeoutTimer);
 
       loadingTimeoutTimer = setTimeout(function() {
+        const msgBox = document.getElementById("loading-timeout-msg");
         if (msgBox) {
           msgBox.style.display = "block";
-          log("読み込み時間が10秒を超過しました。ログを確認してください。", "err");
+          log("読み込み時間が10秒を超過しました。", "err");
         }
       }, 10000);
     }
@@ -1190,7 +1193,7 @@
 
       try {
         await loadCustomSound();
-        loadNews();
+        await loadNews();
 
         const savedUser = localStorage.getItem("scratch_user");
         if (savedUser) {
@@ -1229,18 +1232,20 @@
     }
 
     const usernameInput = document.getElementById("username-input");
-    usernameInput.addEventListener("input", function() {
-      this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
-    });
-    usernameInput.addEventListener("keypress", function(e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        checkUserSessionAndProceed();
-      }
-    });
+    if (usernameInput) {
+      usernameInput.addEventListener("input", function() {
+        this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, "");
+      });
+      usernameInput.addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          checkUserSessionAndProceed();
+        }
+      });
+    }
 
     async function checkUserSessionAndProceed() {
-      const input = usernameInput.value.trim();
+      const input = usernameInput ? usernameInput.value.trim() : "";
       if (!input) {
         showError("err-step1", "ユーザー名を入力してください。");
         return;
@@ -1291,7 +1296,8 @@
 
       log("Cloudflare Turnstile 認証成功", "info");
       generateUniqueCode();
-      document.getElementById("auth-code-display").textContent = authCode;
+      const codeDisplay = document.getElementById("auth-code-display");
+      if (codeDisplay) codeDisplay.textContent = authCode;
       
       setTimeout(function() {
         showStep(3);
@@ -1310,8 +1316,10 @@
     function copyAuthCode() {
       navigator.clipboard.writeText(authCode).then(function() {
         const toast = document.getElementById("copy-toast");
-        toast.style.display = "block";
-        setTimeout(function() { toast.style.display = "none"; }, 3000);
+        if (toast) {
+          toast.style.display = "block";
+          setTimeout(function() { toast.style.display = "none"; }, 3000);
+        }
       });
     }
 
@@ -1338,8 +1346,10 @@
     function updateTimerDisplay() {
       const minutes = Math.floor(timeRemaining / 60);
       const seconds = timeRemaining % 60;
-      document.getElementById("timer-display").textContent = 
-        String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0');
+      const display = document.getElementById("timer-display");
+      if (display) {
+        display.textContent = String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0');
+      }
     }
 
     function startBioPolling() {
@@ -1381,21 +1391,25 @@
       if (checkInterval) clearInterval(checkInterval);
       if (timerInterval) clearInterval(timerInterval);
       targetUsername = "";
-      usernameInput.value = "";
+      if (usernameInput) usernameInput.value = "";
       resetTurnstile();
       showStep(1);
     }
 
     function initDashboard() {
       showStep(4);
-      document.getElementById("welcome-msg").textContent = targetUsername + " の通知状況";
+      const welcomeMsg = document.getElementById("welcome-msg");
+      if (welcomeMsg) welcomeMsg.textContent = targetUsername + " の通知状況";
 
       const adminBtn = document.getElementById("admin-btn");
-      if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
-        adminBtn.style.display = "block";
-      } else {
-        adminBtn.style.display = "none";
-        document.getElementById("sys-log").classList.remove("visible");
+      if (adminBtn) {
+        if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
+          adminBtn.style.display = "block";
+        } else {
+          adminBtn.style.display = "none";
+          const sysLog = document.getElementById("sys-log");
+          if (sysLog) sysLog.classList.remove("visible");
+        }
       }
 
       if (db) {
@@ -1461,13 +1475,15 @@
             recordNotificationHistory(diff);
             playNotificationSound();
             
-            msgElem.classList.remove("count-bounce");
-            void msgElem.offsetWidth;
-            msgElem.classList.add("count-bounce");
+            if (msgElem) {
+              msgElem.classList.remove("count-bounce");
+              void msgElem.offsetWidth;
+              msgElem.classList.add("count-bounce");
+            }
           }
 
           currentMessageCount = count;
-          msgElem.textContent = count;
+          if (msgElem) msgElem.textContent = count;
         }
       } catch (err) {}
     }
@@ -1493,7 +1509,8 @@
     }
 
     function playNotificationSound() {
-      if (!document.getElementById("audio-toggle").checked) return;
+      const toggle = document.getElementById("audio-toggle");
+      if (toggle && !toggle.checked) return;
 
       if (customAudioUrl) {
         playAudioSource(customAudioUrl);
@@ -1537,7 +1554,6 @@
       playNotificationSound();
     }
 
-    // ★ DOM直接書き換えによる確実な画面遷移
     function showStep(stepNum) {
       currentStep = stepNum;
       
@@ -1557,7 +1573,8 @@
     }
 
     function showError(elementId, msg) {
-      document.getElementById(elementId).textContent = msg;
+      const errElem = document.getElementById(elementId);
+      if (errElem) errElem.textContent = msg;
     }
 
     async function logout() {
@@ -1581,27 +1598,32 @@
       localStorage.removeItem("scratch_user");
       currentMessageCount = null;
       targetUsername = "";
-      usernameInput.value = "";
+      if (usernameInput) usernameInput.value = "";
 
-      document.getElementById("admin-btn").style.display = "none";
-      document.getElementById("sys-log").classList.remove("visible");
+      const adminBtn = document.getElementById("admin-btn");
+      if (adminBtn) adminBtn.style.display = "none";
+      const sysLog = document.getElementById("sys-log");
+      if (sysLog) sysLog.classList.remove("visible");
 
       resetTurnstile();
       showStep(1);
     }
 
     function openAnalyticsModal() {
-      document.getElementById("analytics-modal").classList.add("active");
+      const modal = document.getElementById("analytics-modal");
+      if (modal) modal.classList.add("active");
       renderUserAnalyticsChart();
     }
 
     function closeAnalyticsModal() {
-      document.getElementById("analytics-modal").classList.remove("active");
+      const modal = document.getElementById("analytics-modal");
+      if (modal) modal.classList.remove("active");
     }
 
     function renderUserAnalyticsChart() {
       const chartContainer = document.getElementById("user-hourly-chart");
       const avgElem = document.getElementById("avg-notifications-count");
+      if (!chartContainer || !avgElem) return;
 
       const localKey = "scratch_notify_history_" + targetUsername.toLowerCase();
       let history = {};
@@ -1641,21 +1663,25 @@
     }
 
     function openAdminModal() {
-      document.getElementById("admin-modal").classList.add("active");
+      const modal = document.getElementById("admin-modal");
+      if (modal) modal.classList.add("active");
     }
 
     function closeAdminModal() {
-      document.getElementById("admin-modal").classList.remove("active");
+      const modal = document.getElementById("admin-modal");
+      if (modal) modal.classList.remove("active");
     }
 
     function toggleLogPanel() {
-      document.getElementById("sys-log").classList.toggle("visible");
+      const sysLog = document.getElementById("sys-log");
+      if (sysLog) sysLog.classList.toggle("visible");
     }
 
     function showAdminSubpanel(panelId) {
       const subpanels = document.querySelectorAll(".admin-subpanel");
       subpanels.forEach(function(p) { p.classList.remove("active"); });
-      document.getElementById(panelId).classList.add("active");
+      const targetSub = document.getElementById(panelId);
+      if (targetSub) targetSub.classList.add("active");
 
       if (panelId === 'sub-users') renderRegisteredUsers();
       if (panelId === 'sub-usage') renderUsageChart();
@@ -1664,6 +1690,7 @@
 
     async function renderRegisteredUsers() {
       const container = document.getElementById("registered-users-list");
+      if (!container) return;
       if (!db) {
         container.innerHTML = "<p style='font-size:13px; color:#718096;'>Firebase未接続です。</p>";
         return;
@@ -1695,6 +1722,7 @@
     async function renderUsageChart() {
       const container = document.getElementById("usage-chart");
       const totalViewsElem = document.getElementById("total-views-count");
+      if (!container || !totalViewsElem) return;
 
       const dates = [];
       for (let i = 6; i >= 0; i--) {
@@ -1754,6 +1782,7 @@
 
     async function renderAccountManagement() {
       const container = document.getElementById("account-manage-list");
+      if (!container) return;
       if (!db) {
         container.innerHTML = "<p style='font-size:13px; color:#718096;'>Firebase未接続です。</p>";
         return;
