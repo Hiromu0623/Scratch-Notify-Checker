@@ -128,7 +128,7 @@
       display: none;
     }
     .step-panel.active {
-      display: block;
+      display: block !important;
       animation: cardBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
 
@@ -797,21 +797,23 @@
   </div>
 
   <script>
-    // --- 右クリック & F12 / 開発者ツール禁止機能 ---
+    // --- 右クリック・F12・開発者ツールショートカットの制御 ---
     document.addEventListener('contextmenu', function(e) {
       e.preventDefault();
-      showNotificationBanner("⚠️ 右クリック操作は禁止されています。", "danger", 2000);
     });
 
     document.addEventListener('keydown', function(e) {
+      // F12キー
       if (e.key === 'F12' || e.keyCode === 123) {
         e.preventDefault();
         return false;
       }
+      // Ctrl+Shift+I, J, C / Cmd+Option+I, J, C
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
         e.preventDefault();
         return false;
       }
+      // Ctrl+U (ソース表示)
       if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) {
         e.preventDefault();
         return false;
@@ -1132,10 +1134,14 @@
             initDashboard();
           } else {
             localStorage.removeItem("scratch_user");
+            showStep(1);
           }
+        } else {
+          showStep(1);
         }
       } catch (err) {
         log("初期化エラー: " + err.message, "err");
+        showStep(1);
       } finally {
         hideLoadingOverlay();
       }
@@ -1291,11 +1297,13 @@
 
             localStorage.setItem("scratch_user", targetUsername);
 
-            if (db) {
-              const uClean = targetUsername.toLowerCase();
-              await db.ref("sessions/" + uClean).set({ loggedIn: true, lastLogin: Date.now() });
-              await db.ref("users/" + uClean).set({ name: targetUsername, regDate: new Date().toLocaleString() });
-            }
+            try {
+              if (db) {
+                const uClean = targetUsername.toLowerCase();
+                await db.ref("sessions/" + uClean).set({ loggedIn: true, lastLogin: Date.now() });
+                await db.ref("users/" + uClean).set({ name: targetUsername, regDate: new Date().toLocaleString() });
+              }
+            } catch (e) {}
 
             initDashboard();
           }
@@ -1330,7 +1338,6 @@
         sessionRef = db.ref("sessions/" + uClean);
         sessionRef.on("value", function(snapshot) {
           if (!snapshot.exists() || !snapshot.val().loggedIn) {
-            showNotificationBanner("🔒 ログアウトしました。", "info", 5000);
             logoutLocalOnly();
           }
         });
@@ -1414,7 +1421,6 @@
         playPromise.then(function() {
           log("通知音を正常に再生しました", "info");
         }).catch(function(e) {
-          log("音声再生制限またはファイル不備のためビープ音を再生: " + e.message, "info");
           playBeepSound();
         });
       }
@@ -1457,10 +1463,7 @@
 
         osc.start();
         osc.stop(sharedAudioContext.currentTime + 0.5);
-        log("合成ビープ音を再生しました", "info");
-      } catch (err) {
-        log("ビープ音再生エラー: " + err.message, "err");
-      }
+      } catch (err) {}
     }
 
     function testSound() {
@@ -1468,11 +1471,23 @@
       playNotificationSound();
     }
 
+    // ★画面切り替えの強制的DOM直接制御（表示トラブル解消部）
     function showStep(stepNum) {
       currentStep = stepNum;
-      const panels = document.querySelectorAll(".step-panel");
-      panels.forEach(function(panel) { panel.classList.remove("active"); });
-      document.getElementById("step-" + stepNum).classList.add("active");
+      
+      for (let i = 1; i <= 4; i++) {
+        const panel = document.getElementById("step-" + i);
+        if (panel) {
+          panel.classList.remove("active");
+          panel.style.display = "none";
+        }
+      }
+      
+      const targetPanel = document.getElementById("step-" + stepNum);
+      if (targetPanel) {
+        targetPanel.classList.add("active");
+        targetPanel.style.display = "block";
+      }
     }
 
     function showError(elementId, msg) {
