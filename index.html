@@ -1011,16 +1011,16 @@
     }
 
     function playNotificationSound() {
-      const toggle = document.getElementById("audio-toggle");
-      if (toggle && !toggle.checked) return;
+  const toggle = document.getElementById("audio-toggle");
+  if (toggle && !toggle.checked) return;
 
-      if (customAudioUrl) {
-        playAudioSource(customAudioUrl);
-      } else {
-        // ファイル未指定の場合は電子音を再生
-        playBeepSound();
-      }
-    }
+  if (customAudioUrl) {
+    playAudioSource(customAudioUrl);
+  } else {
+    // default-sound.mp3 を再生（失敗したらビープ音へ）
+    playAudioSource("default-sound.mp3");
+  }
+}
 
     function playAudioSource(srcUrl) {
       if (!globalAudioPlayer) {
