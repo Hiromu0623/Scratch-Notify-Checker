@@ -42,9 +42,36 @@
       min-height: 100vh;
       margin: 0;
       padding: 40px 20px;
-      user-select: none;
+      user-select: text; /* 選択可能に設定 */
       box-sizing: border-box;
       position: relative;
+    }
+
+    /* カスタム右クリックメニュー */
+    #custom-context-menu {
+      display: none;
+      position: fixed;
+      z-index: 50000;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      padding: 8px 0;
+      width: 160px;
+    }
+    .context-menu-item {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #2D3748;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s ease;
+    }
+    .context-menu-item:hover {
+      background-color: #EDF2F7;
+      color: var(--scratch-blue);
     }
 
     #inline-notification-banner {
@@ -530,39 +557,6 @@
     }
     .modal-close-btn:hover { color: var(--text-color); background: none; transform: none; }
 
-    .admin-menu-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-top: 16px;
-    }
-    .admin-subpanel {
-      display: none;
-      margin-top: 16px;
-      border-top: 2px solid #EDF2F7;
-      padding-top: 16px;
-    }
-    .admin-subpanel.active { display: block; animation: fadeIn 0.3s ease; }
-
-    .user-list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      background: #F7FAFC;
-      border-radius: 8px;
-      margin-bottom: 8px;
-      border: 1px solid #E2E8F0;
-    }
-    .user-actions { display: flex; gap: 6px; align-items: center; }
-    .user-actions button { width: auto; padding: 6px 10px; font-size: 12px; margin: 0; }
-
-    .protected-badge {
-      font-size: 11px; font-weight: bold;
-      color: #3182CE; background: #EBF8FF;
-      border: 1px solid #BEE3F8; padding: 4px 8px; border-radius: 6px;
-    }
-
     .chart-container {
       display: flex;
       align-items: flex-end;
@@ -606,6 +600,12 @@
   </style>
 </head>
 <body>
+
+  <!-- カスタム右クリックメニュー -->
+  <div id="custom-context-menu">
+    <div class="context-menu-item" onclick="customSelectAll()">✨ すべて選択</div>
+    <div class="context-menu-item" onclick="customCopy()">📋 コピー</div>
+  </div>
 
   <div id="inline-notification-banner"></div>
 
@@ -757,6 +757,20 @@
     </div>
   </div>
 
+  <!-- カスタムF12画面モーダル -->
+  <div class="modal-overlay" id="f12-modal">
+    <div class="modal-content" style="background:#1A202C; color:#FFFFFF;">
+      <button class="modal-close-btn" onclick="closeF12Modal()" style="color:#FFFFFF;">✖</button>
+      <h2 style="color:#4D97FF; margin-bottom:8px;">💻 デベロッパーツール モード</h2>
+      <p style="font-size:12px; color:#A0AEC0; margin-bottom: 16px;">F12キーが検出されました。独自開発者コンソール機能です。</p>
+
+      <div style="font-size:12px; font-weight:bold; color:#E2E8F0; margin-bottom:6px;">リアルタイム ログ出力:</div>
+      <div class="log-panel visible" id="f12-console-log" style="height:200px; width:100%; max-width:100%; border:1px solid #4A5568;"></div>
+
+      <button onclick="closeF12Modal()" class="btn-cancel" style="margin-top: 16px;">閉じる</button>
+    </div>
+  </div>
+
   <!-- 管理者モーダル -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal-content">
@@ -797,30 +811,72 @@
   </div>
 
   <script>
-    // --- 右クリック・F12・開発者ツールショートカットの制御 ---
+    // --- 1. カスタム右クリックメニュー設定 ---
+    const customMenu = document.getElementById('custom-context-menu');
+
     document.addEventListener('contextmenu', function(e) {
-      e.preventDefault();
+      e.preventDefault(); // デフォルトの右クリックメニューを隠す
+      
+      const posX = e.clientX;
+      const posY = e.clientY;
+
+      customMenu.style.left = posX + 'px';
+      customMenu.style.top = posY + 'px';
+      customMenu.style.display = 'block';
     });
 
+    document.addEventListener('click', function(e) {
+      if (!customMenu.contains(e.target)) {
+        customMenu.style.display = 'none';
+      }
+    });
+
+    function customSelectAll() {
+      customMenu.style.display = 'none';
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(document.body);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      showNotificationBanner("✨ すべてのテキストを選択しました", "info", 2000);
+    }
+
+    function customCopy() {
+      customMenu.style.display = 'none';
+      const selectedText = window.getSelection().toString();
+      if (selectedText) {
+        navigator.clipboard.writeText(selectedText).then(function() {
+          showNotificationBanner("📋 選択したテキストをコピーしました！", "success", 2000);
+        });
+      } else {
+        showNotificationBanner("⚠️ テキストが選択されていません", "danger", 2000);
+      }
+    }
+
+    // --- 2. カスタムF12画面の設定 ---
     document.addEventListener('keydown', function(e) {
-      // F12キー
       if (e.key === 'F12' || e.keyCode === 123) {
         e.preventDefault();
-        return false;
-      }
-      // Ctrl+Shift+I, J, C / Cmd+Option+I, J, C
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
-        e.preventDefault();
-        return false;
-      }
-      // Ctrl+U (ソース表示)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) {
-        e.preventDefault();
-        return false;
+        openF12Modal();
       }
     });
 
+    function openF12Modal() {
+      const f12Log = document.getElementById("f12-console-log");
+      const sysLog = document.getElementById("sys-log");
+      if (f12Log && sysLog) {
+        f12Log.innerHTML = sysLog.innerHTML;
+      }
+      document.getElementById("f12-modal").classList.add("active");
+    }
+
+    function closeF12Modal() {
+      document.getElementById("f12-modal").classList.remove("active");
+    }
+
+    // --- Firebase & 本体システム ---
     const firebaseConfig = {
+      const firebaseConfig = {
   apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
   authDomain: "scratch-notify.firebaseapp.com",
   databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
@@ -830,6 +886,7 @@
   appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
   measurementId: "G-2799DMKZTY"
 };
+    };
 
     let db = null;
     try {
@@ -958,7 +1015,7 @@
           customAudioUrl = null;
         }
         updateSoundDetailsUI(null);
-        showNotificationBanner("🗑️ カスタム通知音を削除しました（標準音に戻ります）", "info", 3000);
+        showNotificationBanner("🗑️ カスタム通知音を削除しました", "info", 3000);
         log("カスタム通知音を削除しました", "info");
       } catch (e) {
         log("通知音の削除に失敗しました", "err");
@@ -1066,6 +1123,7 @@
     function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
       const loadingLogBox = document.getElementById("loading-sys-log");
+      const f12ConsoleLog = document.getElementById("f12-console-log");
 
       const timeStr = new Date().toLocaleTimeString();
       const entryText = "[" + timeStr + "] " + msg;
@@ -1084,6 +1142,14 @@
         entry2.textContent = entryText;
         loadingLogBox.appendChild(entry2);
         loadingLogBox.scrollTop = loadingLogBox.scrollHeight;
+      }
+
+      if (f12ConsoleLog) {
+        const entry3 = document.createElement("div");
+        entry3.className = "log-entry " + type;
+        entry3.textContent = entryText;
+        f12ConsoleLog.appendChild(entry3);
+        f12ConsoleLog.scrollTop = f12ConsoleLog.scrollHeight;
       }
     }
 
@@ -1219,7 +1285,7 @@
     function onTurnstileSuccess(token) {
       if (!token || !targetUsername) return;
       if (currentStep !== 2) {
-        log("すでにログイン中か認証画面外のため、Turnstile自動遷移をスキップしました", "info");
+        log("すでにログイン中か認証画面外のためスキップしました", "info");
         return;
       }
 
@@ -1471,7 +1537,7 @@
       playNotificationSound();
     }
 
-    // ★画面切り替えの強制的DOM直接制御（表示トラブル解消部）
+    // ★ DOM直接書き換えによる確実な画面遷移
     function showStep(stepNum) {
       currentStep = stepNum;
       
@@ -1668,7 +1734,6 @@
 
         container.innerHTML = chartHtml;
       } catch (e) {
-        log("アクセス統計データ読込例外: " + e.message, "info");
         totalViewsElem.textContent = "0 回";
         renderEmptyChart(container, dates);
       }
