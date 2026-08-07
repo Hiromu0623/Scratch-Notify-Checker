@@ -57,7 +57,7 @@
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
       padding: 8px 0;
-      width: 160px;
+      width: 170px;
     }
     .context-menu-item {
       padding: 10px 16px;
@@ -72,6 +72,11 @@
     .context-menu-item:hover {
       background-color: #EDF2F7;
       color: var(--scratch-blue);
+    }
+    .context-menu-divider {
+      height: 1px;
+      background-color: #E2E8F0;
+      margin: 4px 0;
     }
 
     #inline-notification-banner {
@@ -601,8 +606,11 @@
 </head>
 <body>
 
-  <!-- カスタム右クリックメニュー -->
+  <!-- カスタム右クリックメニュー（戻る・進むを追加） -->
   <div id="custom-context-menu">
+    <div class="context-menu-item" onclick="customGoBack()">⬅️ 戻る</div>
+    <div class="context-menu-item" onclick="customGoForward()">➡️ 進む</div>
+    <div class="context-menu-divider"></div>
     <div class="context-menu-item" onclick="customSelectAll()">✨ すべて選択</div>
     <div class="context-menu-item" onclick="customCopy()">📋 コピー</div>
   </div>
@@ -757,17 +765,16 @@
     </div>
   </div>
 
-  <!-- カスタムF12画面モーダル -->
+  <!-- F12禁止警告モーダル (再読み込み付き) -->
   <div class="modal-overlay" id="f12-modal">
-    <div class="modal-content" style="background:#1A202C; color:#FFFFFF;">
-      <button class="modal-close-btn" onclick="closeF12Modal()" style="color:#FFFFFF;">✖</button>
-      <h2 style="color:#4D97FF; margin-bottom:8px;">💻 デベロッパーツール モード</h2>
-      <p style="font-size:12px; color:#A0AEC0; margin-bottom: 16px;">F12キーが検出されました。独自開発者コンソール機能です。</p>
-
-      <div style="font-size:12px; font-weight:bold; color:#E2E8F0; margin-bottom:6px;">リアルタイム ログ出力:</div>
-      <div class="log-panel visible" id="f12-console-log" style="height:200px; width:100%; max-width:100%; border:1px solid #4A5568;"></div>
-
-      <button onclick="closeF12Modal()" class="btn-cancel" style="margin-top: 16px;">閉じる</button>
+    <div class="modal-content" style="text-align: center; max-width: 420px;">
+      <h2 style="color:var(--danger-color); margin-bottom:12px;">🚫 アクセス拒否</h2>
+      <p style="font-size:15px; color:#2D3748; line-height:1.6; font-weight:bold; margin-bottom:20px;">
+        デベロッパーツールは禁止されています。<br>再読み込みしてください。
+      </p>
+      <button onclick="reloadPage()" style="background-color: var(--scratch-blue); font-size:16px; padding:12px;">
+        🔄 ページを再読み込み
+      </button>
     </div>
   </div>
 
@@ -811,7 +818,7 @@
   </div>
 
   <script>
-    // --- 1. カスタム右クリック & F12のイベント登録 (最優先処理) ---
+    // --- 1. カスタム右クリック & F12のキーバインド制御 (最優先処理) ---
     window.addEventListener('contextmenu', function(e) {
       e.preventDefault();
       const customMenu = document.getElementById('custom-context-menu');
@@ -836,6 +843,18 @@
         openF12Modal();
       }
     }, true);
+
+    function customGoBack() {
+      const customMenu = document.getElementById('custom-context-menu');
+      if (customMenu) customMenu.style.display = 'none';
+      window.history.back();
+    }
+
+    function customGoForward() {
+      const customMenu = document.getElementById('custom-context-menu');
+      if (customMenu) customMenu.style.display = 'none';
+      window.history.forward();
+    }
 
     function customSelectAll() {
       const customMenu = document.getElementById('custom-context-menu');
@@ -862,18 +881,12 @@
     }
 
     function openF12Modal() {
-      const f12Log = document.getElementById("f12-console-log");
-      const sysLog = document.getElementById("sys-log");
-      if (f12Log && sysLog) {
-        f12Log.innerHTML = sysLog.innerHTML;
-      }
       const modal = document.getElementById("f12-modal");
       if (modal) modal.classList.add("active");
     }
 
-    function closeF12Modal() {
-      const modal = document.getElementById("f12-modal");
-      if (modal) modal.classList.remove("active");
+    function reloadPage() {
+      window.location.reload();
     }
 
     // --- Firebase & 本体システム ---
@@ -887,6 +900,7 @@
   appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
   measurementId: "G-2799DMKZTY"
 };
+
     let db = null;
     try {
       if (window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -1128,7 +1142,6 @@
     function log(msg, type = "normal") {
       const logBox = document.getElementById("sys-log");
       const loadingLogBox = document.getElementById("loading-sys-log");
-      const f12ConsoleLog = document.getElementById("f12-console-log");
 
       const timeStr = new Date().toLocaleTimeString();
       const entryText = "[" + timeStr + "] " + msg;
@@ -1147,14 +1160,6 @@
         entry2.textContent = entryText;
         loadingLogBox.appendChild(entry2);
         loadingLogBox.scrollTop = loadingLogBox.scrollHeight;
-      }
-
-      if (f12ConsoleLog) {
-        const entry3 = document.createElement("div");
-        entry3.className = "log-entry " + type;
-        entry3.textContent = entryText;
-        f12ConsoleLog.appendChild(entry3);
-        f12ConsoleLog.scrollTop = f12ConsoleLog.scrollHeight;
       }
     }
 
