@@ -797,16 +797,30 @@
   </div>
 
   <script>
+    // --- 右クリック & F12 / 開発者ツール禁止機能 ---
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      showNotificationBanner("⚠️ 右クリック操作は禁止されています。", "danger", 2000);
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'F12' || e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
+        e.preventDefault();
+        return false;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
     const firebaseConfig = {
-  apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
-  authDomain: "scratch-notify.firebaseapp.com",
-  databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
-  projectId: "scratch-notify",
-  storageBucket: "scratch-notify.firebasestorage.app",
-  messagingSenderId: "340553335348",
-  appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
-  measurementId: "G-2799DMKZTY"
-};
+      // Firebaseの設定オブジェクトをここに入力
+    };
 
     let db = null;
     try {
@@ -1073,9 +1087,7 @@
           showNotificationBanner("🚫 このアカウントは利用停止（BAN）されています。", "danger", 5000);
           return false;
         }
-
-        const sessionSnap = await db.ref("sessions/" + userClean).get();
-        return sessionSnap.exists() && sessionSnap.val().loggedIn === true;
+        return true;
       } catch (e) {
         return true;
       }
@@ -1270,13 +1282,14 @@
 
             showNotificationBanner("🎉 認証が完了しました！", "success", 5000);
 
+            localStorage.setItem("scratch_user", targetUsername);
+
             if (db) {
               const uClean = targetUsername.toLowerCase();
               await db.ref("sessions/" + uClean).set({ loggedIn: true, lastLogin: Date.now() });
               await db.ref("users/" + uClean).set({ name: targetUsername, regDate: new Date().toLocaleString() });
             }
 
-            localStorage.setItem("scratch_user", targetUsername);
             initDashboard();
           }
         } catch (err) {}
