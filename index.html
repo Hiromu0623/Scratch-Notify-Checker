@@ -116,6 +116,8 @@
       box-sizing: border-box;
       transition: opacity 0.4s ease;
     }
+
+    /* 再読み込み時のアニメーションスピナー（UIの共通規格） */
     .loading-spinner {
       border: 5px solid #E2E8F0;
       border-top: 5px solid var(--scratch-blue);
@@ -293,17 +295,12 @@
       text-align: center;
       background: #FAF5FF;
       margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
-    .spinner {
-      border: 4px solid #E2E8F0;
-      border-top: 4px solid var(--scratch-orange);
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 12px;
-    }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -726,9 +723,11 @@
         プロフィールを開く
       </button>
 
+      <!-- スピナーのUI表現を統一 -->
       <div class="cf-box">
-        <div class="spinner"></div>
-        <p style="margin:0; font-size:13px; color:#4A5568;">「私について」の更新を待機しています...</p>
+        <div class="loading-spinner" style="width: 36px; height: 36px; border-width: 4px; margin-bottom: 8px;"></div>
+        <p style="margin:0; font-size:13px; font-weight: bold; color:#4A5568;">読み込み中...</p>
+        <p style="margin:4px 0 0 0; font-size:11px; color:#718096;">「私について」の更新を待機しています</p>
       </div>
 
       <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
@@ -827,7 +826,7 @@
     </div>
   </div>
 
-  <!-- 管理者モーダル -->
+  <!-- 管理者モーダル（「登録ユーザー」項目およびサブパネルを排除） -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="closeAdminModal()">✖</button>
@@ -836,14 +835,8 @@
 
       <div class="admin-menu-grid">
         <button onclick="toggleLogPanel()" style="background-color: #2D3748;">📜 システムログ</button>
-        <button onclick="showAdminSubpanel('sub-users')" style="background-color: #4A5568;">👤 登録ユーザー</button>
         <button onclick="showAdminSubpanel('sub-usage')" style="background-color: #4A5568;">📊 サイト使用回数</button>
         <button onclick="showAdminSubpanel('sub-manage')" style="background-color: #4A5568;">🛠️ アカウント管理</button>
-      </div>
-
-      <div id="sub-users" class="admin-subpanel">
-        <h3>登録済みユーザー一覧</h3>
-        <div id="registered-users-list"></div>
       </div>
 
       <div id="sub-usage" class="admin-subpanel">
@@ -1011,16 +1004,15 @@
     }
 
     function playNotificationSound() {
-  const toggle = document.getElementById("audio-toggle");
-  if (toggle && !toggle.checked) return;
+      const toggle = document.getElementById("audio-toggle");
+      if (toggle && !toggle.checked) return;
 
-  if (customAudioUrl) {
-    playAudioSource(customAudioUrl);
-  } else {
-    // default-sound.mp3 を再生（失敗したらビープ音へ）
-    playAudioSource("default-sound.mp3");
-  }
-}
+      if (customAudioUrl) {
+        playAudioSource(customAudioUrl);
+      } else {
+        playAudioSource("default-sound.mp3");
+      }
+    }
 
     function playAudioSource(srcUrl) {
       if (!globalAudioPlayer) {
@@ -1049,16 +1041,15 @@
 
     // --- 3. Database & Firebase ---
     const firebaseConfig = {
-  apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
-  authDomain: "scratch-notify.firebaseapp.com",
-  databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
-  projectId: "scratch-notify",
-  storageBucket: "scratch-notify.firebasestorage.app",
-  messagingSenderId: "340553335348",
-  appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
-  measurementId: "G-2799DMKZTY"
-};
-
+      apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
+      authDomain: "scratch-notify.firebaseapp.com",
+      databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
+      projectId: "scratch-notify",
+      storageBucket: "scratch-notify.firebasestorage.app",
+      messagingSenderId: "340553335348",
+      appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
+      measurementId: "G-2799DMKZTY"
+    };
 
     let db = null;
     try {
@@ -1536,6 +1527,7 @@
       localStorage.setItem(localKey, JSON.stringify(history));
     }
 
+    // 通知数の増加・減少検知処理
     async function updateMessageCount() {
       if (!targetUsername) return;
 
@@ -1547,15 +1539,21 @@
           const count = data.count;
           const msgElem = document.getElementById("msg-count");
 
-          if (currentMessageCount !== null && count > currentMessageCount) {
-            const diff = count - currentMessageCount;
-            recordNotificationHistory(diff);
-            playNotificationSound();
-            
-            if (msgElem) {
-              msgElem.classList.remove("count-bounce");
-              void msgElem.offsetWidth;
-              msgElem.classList.add("count-bounce");
+          if (currentMessageCount !== null) {
+            if (count > currentMessageCount) {
+              const diff = count - currentMessageCount;
+              recordNotificationHistory(diff);
+              playNotificationSound();
+              
+              if (msgElem) {
+                msgElem.classList.remove("count-bounce");
+                void msgElem.offsetWidth;
+                msgElem.classList.add("count-bounce");
+              }
+            } else if (count < currentMessageCount) {
+              // 通知の減少を検出した場合のフィードバック
+              const decDiff = currentMessageCount - count;
+              showNotificationBanner("📉 通知が " + decDiff + " 件減少（既読処理）されました", "info", 3000);
             }
           }
 
@@ -1688,37 +1686,8 @@
       const targetSub = document.getElementById(panelId);
       if (targetSub) targetSub.classList.add("active");
 
-      if (panelId === 'sub-users') renderRegisteredUsers();
       if (panelId === 'sub-usage') renderUsageChart();
       if (panelId === 'sub-manage') renderAccountManagement();
-    }
-
-    async function renderRegisteredUsers() {
-      const container = document.getElementById("registered-users-list");
-      if (!container) return;
-      if (!db) {
-        container.innerHTML = "<p style='font-size:13px; color:#718096;'>Firebase未接続です。</p>";
-        return;
-      }
-
-      try {
-        const snap = await db.ref("users").get();
-        if (!snap.exists()) {
-          container.innerHTML = "<p style='font-size:13px; color:#718096;'>登録ユーザーがいません。</p>";
-          return;
-        }
-
-        let html = "";
-        snap.forEach(function(child) {
-          const u = child.val();
-          html += '<div class="user-list-item">';
-          html += '  <div><strong>' + u.name + '</strong><div style="font-size:10px; color:#718096;">登録: ' + (u.regDate || '不明') + '</div></div>';
-          html += '</div>';
-        });
-        container.innerHTML = html;
-      } catch (e) {
-        container.innerHTML = "<p style='font-size:13px; color:#FF6565;'>取得エラーが発生しました</p>";
-      }
     }
 
     async function renderUsageChart() {
