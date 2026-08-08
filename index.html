@@ -47,7 +47,7 @@
       position: relative;
     }
 
-    /* カスタム右クリックメニュー */
+    /* カスタム右クリックメニュー (全選択から除外するため user-select: none) */
     #custom-context-menu {
       display: none;
       position: fixed;
@@ -58,6 +58,8 @@
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
       padding: 8px 0;
       width: 170px;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .context-menu-item {
       padding: 10px 16px;
@@ -173,7 +175,7 @@
 
     h1, h2, h3 { margin-top: 0; }
 
-    input[type="text"], input[type="file"] {
+    input[type="text"], input[type="password"], input[type="file"] {
       width: 100%;
       padding: 12px 16px;
       border: 2px solid #E2E8F0;
@@ -184,7 +186,7 @@
       font-family: inherit;
       transition: all 0.25s ease;
     }
-    input[type="text"]:focus { 
+    input[type="text"]:focus, input[type="password"]:focus { 
       border-color: var(--scratch-blue);
       outline: none; 
       box-shadow: 0 0 0 4px rgba(77, 151, 255, 0.25);
@@ -648,7 +650,7 @@
     }
 
     .bypass-link {
-      display: inline-block;
+      display: none;
       margin-top: 10px;
       font-size: 12px;
       color: #718096;
@@ -664,11 +666,12 @@
 
   <!-- カスタム右クリックメニュー -->
   <div id="custom-context-menu">
-    <div class="context-menu-item" onclick="customGoBack()">⬅️ 戻る</div>
-    <div class="context-menu-item" onclick="customGoForward()">➡️ 進む</div>
-    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="ctx-nav-back" onclick="customGoBack()">⬅️ 戻る</div>
+    <div class="context-menu-item" id="ctx-nav-forward" onclick="customGoForward()">➡️ 進む</div>
+    <div class="context-menu-divider" id="ctx-nav-divider"></div>
     <div class="context-menu-item" onclick="customSelectAll()">✨ すべて選択</div>
     <div class="context-menu-item" onclick="customCopy()">📋 コピー</div>
+    <div class="context-menu-item" onclick="customPaste()">📋 貼り付け</div>
   </div>
 
   <div id="inline-notification-banner"></div>
@@ -741,7 +744,7 @@
 
       <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
       <br>
-      <span class="bypass-link" onclick="bypassAdminLogin()">⚠️ ブロック中の方はこちら（手動パスコード認証）</span>
+      <span class="bypass-link" id="admin-bypass-btn" onclick="openBypassModal()">⚠️ ブロック中の方はこちら（手動パスコード認証）</span>
       <div id="err-step3" class="error-text"></div>
     </div>
 
@@ -805,6 +808,18 @@
     <div class="log-entry info">[SYSTEM] ログモニターが起動しました。</div>
   </div>
 
+  <!-- 緊急バイパス用パスワードモーダル (伏字対応) -->
+  <div class="modal-overlay" id="bypass-modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+      <h3>🔑 管理者用緊急認証</h3>
+      <p style="font-size:13px; color:#718096; margin-bottom:16px;">マスターパスコードを入力してください</p>
+      <input type="password" id="bypass-pass-input" placeholder="パスコードを入力" style="margin-bottom:12px;" />
+      <div id="bypass-err-msg" class="error-text" style="margin-bottom:12px;"></div>
+      <button onclick="submitBypassPass()">送信してログイン</button>
+      <button onclick="closeBypassModal()" class="btn-cancel" style="margin-top:4px;">キャンセル</button>
+    </div>
+  </div>
+
   <!-- 個人用通知データ分析モーダル -->
   <div class="modal-overlay" id="analytics-modal">
     <div class="modal-content">
@@ -848,6 +863,7 @@
         <button onclick="toggleLogPanel()" style="background-color: #2D3748;">📜 システムログ</button>
         <button onclick="showAdminSubpanel('sub-usage')" style="background-color: #4A5568;">📊 サイト使用回数</button>
         <button onclick="showAdminSubpanel('sub-manage')" style="background-color: #4A5568;">🛠️ アカウント管理</button>
+        <button onclick="showAdminSubpanel('sub-pass')" style="background-color: #6D28D9;">🔑 パスコード変更</button>
       </div>
 
       <div id="sub-usage" class="admin-subpanel">
@@ -866,6 +882,15 @@
         <div id="account-manage-list"></div>
       </div>
 
+      <div id="sub-pass" class="admin-subpanel">
+        <h3>緊急用マスターパスコード変更</h3>
+        <p style="font-size:12px; color:#718096;">ブロック時用の緊急バイパスパスコードを変更します。</p>
+        <input type="password" id="new-admin-pass" placeholder="新しいパスコード" />
+        <input type="password" id="confirm-admin-pass" placeholder="新しいパスコード（確認）" />
+        <button onclick="changeMasterPassword()" style="background-color:#6D28D9;">パスコードを更新</button>
+        <div id="pass-change-msg" class="error-text"></div>
+      </div>
+
       <button onclick="closeAdminModal()" class="btn-cancel" style="margin-top: 20px;">閉じる</button>
     </div>
   </div>
@@ -881,10 +906,39 @@
       return token;
     }
 
+    // --- パスワード管理 ---
+    function getMasterPassword() {
+      return localStorage.getItem("scratch_admin_master_pass") || "HIROMU_EMERGENCY_2026";
+    }
+
+    function setMasterPassword(newPass) {
+      localStorage.setItem("scratch_admin_master_pass", newPass);
+    }
+
     // --- 1. 右クリック & F12制御 ---
     window.addEventListener('contextmenu', function(e) {
       e.preventDefault();
       const customMenu = document.getElementById('custom-context-menu');
+      
+      // テキスト選択状態のチェック
+      const selection = window.getSelection().toString();
+      const hasSelection = selection.length > 0;
+
+      const navBack = document.getElementById('ctx-nav-back');
+      const navForward = document.getElementById('ctx-nav-forward');
+      const navDivider = document.getElementById('ctx-nav-divider');
+
+      // 文字選択中は「戻る」「進む」を非表示にする
+      if (hasSelection) {
+        if (navBack) navBack.style.display = 'none';
+        if (navForward) navForward.style.display = 'none';
+        if (navDivider) navDivider.style.display = 'none';
+      } else {
+        if (navBack) navBack.style.display = 'flex';
+        if (navForward) navForward.style.display = 'flex';
+        if (navDivider) navDivider.style.display = 'block';
+      }
+
       if (customMenu) {
         customMenu.style.left = e.clientX + 'px';
         customMenu.style.top = e.clientY + 'px';
@@ -922,12 +976,29 @@
     function customSelectAll() {
       const customMenu = document.getElementById('custom-context-menu');
       if (customMenu) customMenu.style.display = 'none';
+      
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(document.body);
       selection.removeAllRanges();
       selection.addRange(range);
-      showNotificationBanner("✨ すべてのテキストを選択しました", "info", 2000);
+
+      // すべて選択後、自動的に右クリックメニューを開く
+      setTimeout(function() {
+        const backElem = document.getElementById('ctx-nav-back');
+        const fwdElem = document.getElementById('ctx-nav-forward');
+        const divElem = document.getElementById('ctx-nav-divider');
+        
+        if (backElem) backElem.style.display = 'none';
+        if (fwdElem) fwdElem.style.display = 'none';
+        if (divElem) divElem.style.display = 'none';
+
+        if (customMenu) {
+          customMenu.style.left = (window.innerWidth / 2 - 85) + 'px';
+          customMenu.style.top = (window.innerHeight / 2 - 50) + 'px';
+          customMenu.style.display = 'block';
+        }
+      }, 50);
     }
 
     function customCopy() {
@@ -938,6 +1009,30 @@
         copyToClipboardNative(selectedText);
       } else {
         showNotificationBanner("⚠️ テキストが選択されていません", "danger", 2000);
+      }
+    }
+
+    async function customPaste() {
+      const customMenu = document.getElementById('custom-context-menu');
+      if (customMenu) customMenu.style.display = 'none';
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          const activeElem = document.activeElement;
+          if (activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA')) {
+            const start = activeElem.selectionStart || 0;
+            const end = activeElem.selectionEnd || 0;
+            activeElem.value = activeElem.value.substring(0, start) + text + activeElem.value.substring(end);
+            showNotificationBanner("📋 貼り付けました", "success", 2000);
+          } else {
+            showNotificationBanner("⚠️ 貼り付け先（入力欄）を選択してください", "info", 2000);
+          }
+        } else {
+          showNotificationBanner("❌ お使いのブラウザは貼り付けAPIに対応していません", "danger", 2000);
+        }
+      } catch (err) {
+        showNotificationBanner("❌ クリップボードの読み取り権限が拒否されました", "danger", 2000);
       }
     }
 
@@ -1408,6 +1503,16 @@
         codeDisplay.textContent = authCode;
       }
       
+      // Hiromu0623ログイン時のみバイパスボタンを表示
+      const bypassBtn = document.getElementById("admin-bypass-btn");
+      if (bypassBtn) {
+        if (targetUsername.toLowerCase() === ADMIN_USER.toLowerCase()) {
+          bypassBtn.style.display = "inline-block";
+        } else {
+          bypassBtn.style.display = "none";
+        }
+      }
+
       setTimeout(function() {
         showStep(3);
         startTimer();
@@ -1480,14 +1585,28 @@
       window.open("https://scratch.mit.edu/users/" + targetUsername + "/", "_blank");
     }
 
-    function bypassAdminLogin() {
-      if (targetUsername.toLowerCase() !== ADMIN_USER.toLowerCase()) {
-        alert("この機能は管理者専用です。");
-        return;
-      }
-      
-      const pass = prompt("管理者用マスターパスコードを入力してください:");
-      if (pass === "HIROMU_EMERGENCY_2026") {
+    function openBypassModal() {
+      if (targetUsername.toLowerCase() !== ADMIN_USER.toLowerCase()) return;
+      const modal = document.getElementById("bypass-modal");
+      const passInput = document.getElementById("bypass-pass-input");
+      const errMsg = document.getElementById("bypass-err-msg");
+      if (passInput) passInput.value = "";
+      if (errMsg) errMsg.textContent = "";
+      if (modal) modal.classList.add("active");
+    }
+
+    function closeBypassModal() {
+      const modal = document.getElementById("bypass-modal");
+      if (modal) modal.classList.remove("active");
+    }
+
+    function submitBypassPass() {
+      const passInput = document.getElementById("bypass-pass-input");
+      const errMsg = document.getElementById("bypass-err-msg");
+      const inputPass = passInput ? passInput.value : "";
+
+      if (inputPass === getMasterPassword()) {
+        closeBypassModal();
         if (checkInterval) clearInterval(checkInterval);
         if (timerInterval) clearInterval(timerInterval);
 
@@ -1503,8 +1622,8 @@
           });
         }
         initDashboard();
-      } else if (pass) {
-        alert("パスコードが間違っています。");
+      } else {
+        if (errMsg) errMsg.textContent = "パスコードが正しくありません。";
       }
     }
 
@@ -1792,6 +1911,30 @@
 
       if (panelId === 'sub-usage') renderUsageChart();
       if (panelId === 'sub-manage') renderAccountManagement();
+    }
+
+    function changeMasterPassword() {
+      const newPass = document.getElementById("new-admin-pass").value.trim();
+      const confirmPass = document.getElementById("confirm-admin-pass").value.trim();
+      const msgElem = document.getElementById("pass-change-msg");
+
+      if (!newPass) {
+        if (msgElem) msgElem.textContent = "パスコードを入力してください。";
+        return;
+      }
+      if (newPass !== confirmPass) {
+        if (msgElem) msgElem.textContent = "パスコードが一致しません。";
+        return;
+      }
+
+      setMasterPassword(newPass);
+      document.getElementById("new-admin-pass").value = "";
+      document.getElementById("confirm-admin-pass").value = "";
+      if (msgElem) {
+        msgElem.style.color = "var(--success-green)";
+        msgElem.textContent = "✅ パスコードを更新しました。";
+        setTimeout(() => { msgElem.textContent = ""; msgElem.style.color = "var(--danger-color)"; }, 3000);
+      }
     }
 
     async function renderUsageChart() {
