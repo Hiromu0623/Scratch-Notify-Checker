@@ -117,7 +117,6 @@
       transition: opacity 0.4s ease;
     }
 
-    /* 再読み込み時のアニメーションスピナー */
     .loading-spinner {
       border: 5px solid #E2E8F0;
       border-top: 5px solid var(--scratch-blue);
@@ -647,6 +646,18 @@
       color: #718096;
       margin-top: 6px;
     }
+
+    .bypass-link {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #718096;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .bypass-link:hover {
+      color: var(--danger-color);
+    }
   </style>
 </head>
 <body>
@@ -729,6 +740,8 @@
       </div>
 
       <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
+      <br>
+      <span class="bypass-link" onclick="bypassAdminLogin()">⚠️ ブロック中の方はこちら（手動パスコード認証）</span>
       <div id="err-step3" class="error-text"></div>
     </div>
 
@@ -858,6 +871,16 @@
   </div>
 
   <script>
+    // --- 端末固有セッショントークンの管理 ---
+    function getOrCreateSessionToken() {
+      let token = localStorage.getItem("scratch_session_token");
+      if (!token) {
+        token = "token_" + Math.random().toString(36).substring(2) + Date.now().toString(36);
+        localStorage.setItem("scratch_session_token", token);
+      }
+      return token;
+    }
+
     // --- 1. 右クリック & F12制御 ---
     window.addEventListener('contextmenu', function(e) {
       e.preventDefault();
@@ -1261,7 +1284,10 @@
           showNotificationBanner("🚫 このアカウントは利用停止（BAN）されています。", "danger", 5000);
           return false;
         }
-        return true;
+
+        const myToken = getOrCreateSessionToken();
+        const sessionSnap = await db.ref("sessions/" + userClean + "/" + myToken).get();
+        return sessionSnap.exists() && sessionSnap.val().loggedIn === true;
       } catch (e) {
         return true;
       }
@@ -1343,6 +1369,7 @@
 
       showError("err-step1", "");
       targetUsername = input;
+      const myToken = getOrCreateSessionToken();
 
       if (db) {
         const uClean = input.toLowerCase();
@@ -1353,7 +1380,7 @@
             return;
           }
 
-          const sessionSnap = await db.ref("sessions/" + uClean).get();
+          const sessionSnap = await db.ref("sessions/" + uClean + "/" + myToken).get();
           if (sessionSnap.exists() && sessionSnap.val().loggedIn === true) {
             localStorage.setItem("scratch_user", targetUsername);
             initDashboard();
@@ -1395,7 +1422,6 @@
       return authCode;
     }
 
-    // 汎用クリップボードコピー関数（フォールバック付）
     function copyToClipboardNative(text) {
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(function() {
@@ -1454,6 +1480,34 @@
       window.open("https://scratch.mit.edu/users/" + targetUsername + "/", "_blank");
     }
 
+    function bypassAdminLogin() {
+      if (targetUsername.toLowerCase() !== ADMIN_USER.toLowerCase()) {
+        alert("この機能は管理者専用です。");
+        return;
+      }
+      
+      const pass = prompt("管理者用マスターパスコードを入力してください:");
+      if (pass === "HIROMU_EMERGENCY_2026") {
+        if (checkInterval) clearInterval(checkInterval);
+        if (timerInterval) clearInterval(timerInterval);
+
+        showNotificationBanner("🔑 緊急パスコードで認証をバイパスしました", "success", 4000);
+        localStorage.setItem("scratch_user", targetUsername);
+        
+        const myToken = getOrCreateSessionToken();
+        if (db) {
+          db.ref("sessions/" + targetUsername.toLowerCase() + "/" + myToken).set({
+            loggedIn: true,
+            lastLogin: Date.now(),
+            bypass: true
+          });
+        }
+        initDashboard();
+      } else if (pass) {
+        alert("パスコードが間違っています。");
+      }
+    }
+
     function startTimer() {
       if (timerInterval) clearInterval(timerInterval);
       timeRemaining = 300;
@@ -1496,10 +1550,15 @@
             showNotificationBanner("🎉 認証が完了しました！", "success", 5000);
             localStorage.setItem("scratch_user", targetUsername);
 
+            const myToken = getOrCreateSessionToken();
             try {
               if (db) {
                 const uClean = targetUsername.toLowerCase();
-                await db.ref("sessions/" + uClean).set({ loggedIn: true, lastLogin: Date.now() });
+                await db.ref("sessions/" + uClean + "/" + myToken).set({ 
+                  loggedIn: true, 
+                  lastLogin: Date.now(),
+                  device: navigator.userAgent
+                });
                 await db.ref("users/" + uClean).set({ name: targetUsername, regDate: new Date().toLocaleString() });
               }
             } catch (e) {}
@@ -1537,8 +1596,10 @@
 
       if (db) {
         const uClean = targetUsername.toLowerCase();
+        const myToken = getOrCreateSessionToken();
+        
         if (sessionRef) sessionRef.off();
-        sessionRef = db.ref("sessions/" + uClean);
+        sessionRef = db.ref("sessions/" + uClean + "/" + myToken);
         sessionRef.on("value", function(snapshot) {
           if (!snapshot.exists() || !snapshot.val().loggedIn) logoutLocalOnly();
         });
@@ -1625,8 +1686,11 @@
     }
 
     async function logout() {
+      const myToken = getOrCreateSessionToken();
       if (db && targetUsername) {
-        await db.ref("sessions/" + targetUsername.toLowerCase()).remove();
+        try {
+          await db.ref("sessions/" + targetUsername.toLowerCase() + "/" + myToken).remove();
+        } catch (e) {}
       }
       logoutLocalOnly();
     }
@@ -1833,7 +1897,7 @@
       if (db) {
         try {
           await db.ref("sessions/" + username.toLowerCase()).remove();
-          showNotificationBanner(username + " を強制ログアウトさせました。", "info");
+          showNotificationBanner(username + " の全セッションを削除しました。", "info");
         } catch (e) {}
       }
     }
