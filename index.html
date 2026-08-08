@@ -117,7 +117,7 @@
       transition: opacity 0.4s ease;
     }
 
-    /* 再読み込み時のアニメーションスピナー（UIの共通規格） */
+    /* 再読み込み時のアニメーションスピナー */
     .loading-spinner {
       border: 5px solid #E2E8F0;
       border-top: 5px solid var(--scratch-blue);
@@ -559,7 +559,6 @@
     }
     .modal-close-btn:hover { color: var(--text-color); background: none; transform: none; }
 
-    /* 管理者サブパネル表示制御 */
     .admin-subpanel {
       display: none;
       margin-top: 16px;
@@ -723,7 +722,6 @@
         プロフィールを開く
       </button>
 
-      <!-- スピナーのUI表現を統一 -->
       <div class="cf-box">
         <div class="loading-spinner" style="width: 36px; height: 36px; border-width: 4px; margin-bottom: 8px;"></div>
         <p style="margin:0; font-size:13px; font-weight: bold; color:#4A5568;">読み込み中...</p>
@@ -826,7 +824,7 @@
     </div>
   </div>
 
-  <!-- 管理者モーダル（「登録ユーザー」項目およびサブパネルを排除） -->
+  <!-- 管理者モーダル -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="closeAdminModal()">✖</button>
@@ -914,9 +912,7 @@
       if (customMenu) customMenu.style.display = 'none';
       const selectedText = window.getSelection().toString();
       if (selectedText) {
-        navigator.clipboard.writeText(selectedText).then(function() {
-          showNotificationBanner("📋 選択したテキストをコピーしました！", "success", 2000);
-        });
+        copyToClipboardNative(selectedText);
       } else {
         showNotificationBanner("⚠️ テキストが選択されていません", "danger", 2000);
       }
@@ -931,7 +927,7 @@
       window.location.reload();
     }
 
-    // --- 2. 音声再生エンジンの強力化 (Web Audio API + Audio) ---
+    // --- 2. 音声再生エンジン ---
     let globalAudioPlayer = null;
     let sharedAudioContext = null;
     let isAudioUnlocked = false;
@@ -952,7 +948,6 @@
         globalAudioPlayer = new Audio();
       }
       
-      // 無音再生でAutoplay制限解除
       globalAudioPlayer.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
       globalAudioPlayer.play().then(function() {
         isAudioUnlocked = true;
@@ -980,14 +975,13 @@
         const osc = sharedAudioContext.createOscillator();
         const gain = sharedAudioContext.createGain();
 
-        // 爽やかな電子通知音 (和音アルペジオ)
         const now = sharedAudioContext.currentTime;
         osc.type = "sine";
         
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
-        osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.1);
+        osc.frequency.setValueAtTime(783.99, now + 0.2);
+        osc.frequency.setValueAtTime(1046.50, now + 0.3);
 
         gain.gain.setValueAtTime(0.15, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
@@ -1380,9 +1374,12 @@
 
     function onTurnstileSuccess(token) {
       if (!token || !targetUsername || currentStep !== 2) return;
+      
       generateUniqueCode();
       const codeDisplay = document.getElementById("auth-code-display");
-      if (codeDisplay) codeDisplay.textContent = authCode;
+      if (codeDisplay) {
+        codeDisplay.textContent = authCode;
+      }
       
       setTimeout(function() {
         showStep(3);
@@ -1398,14 +1395,59 @@
       return authCode;
     }
 
-    function copyAuthCode() {
-      navigator.clipboard.writeText(authCode).then(function() {
-        const toast = document.getElementById("copy-toast");
-        if (toast) {
-          toast.style.display = "block";
-          setTimeout(function() { toast.style.display = "none"; }, 3000);
+    // 汎用クリップボードコピー関数（フォールバック付）
+    function copyToClipboardNative(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function() {
+          showCopySuccess();
+        }).catch(function() {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful) {
+          showCopySuccess();
+        } else {
+          showNotificationBanner("❌ コピーに失敗しました。手動でコピーしてください。", "danger", 3000);
         }
-      });
+      } catch (err) {
+        showNotificationBanner("❌ コピーに失敗しました。手動でコピーしてください。", "danger", 3000);
+      }
+    }
+
+    function showCopySuccess() {
+      const toast = document.getElementById("copy-toast");
+      if (toast) {
+        toast.style.display = "block";
+        setTimeout(function() { toast.style.display = "none"; }, 3000);
+      }
+      showNotificationBanner("📋 コードをクリップボードにコピーしました！", "success", 3000);
+    }
+
+    function copyAuthCode() {
+      const codeElem = document.getElementById("auth-code-display");
+      const codeText = codeElem ? codeElem.textContent.trim() : "";
+
+      if (!codeText || codeText === "------") {
+        showNotificationBanner("⚠️ コードがまだ生成されていません", "danger", 3000);
+        return;
+      }
+      copyToClipboardNative(codeText);
     }
 
     function openScratchProfile() {
@@ -1527,7 +1569,6 @@
       localStorage.setItem(localKey, JSON.stringify(history));
     }
 
-    // 通知数の増加・減少検知処理
     async function updateMessageCount() {
       if (!targetUsername) return;
 
@@ -1551,7 +1592,6 @@
                 msgElem.classList.add("count-bounce");
               }
             } else if (count < currentMessageCount) {
-              // 通知の減少を検出した場合のフィードバック
               const decDiff = currentMessageCount - count;
               showNotificationBanner("📉 通知が " + decDiff + " 件減少（既読処理）されました", "info", 3000);
             }
