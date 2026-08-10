@@ -47,6 +47,41 @@
       position: relative;
     }
 
+    /* パスワード入力コンテナ & 表示切替ボタン用スタイル */
+    .password-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    .password-input-wrapper input[type="password"],
+    .password-input-wrapper input[type="text"] {
+      width: 100%;
+      padding-right: 48px;
+      margin-bottom: 0;
+    }
+    .password-toggle-btn {
+      position: absolute;
+      right: 8px;
+      width: auto !important;
+      padding: 6px 10px !important;
+      background: transparent !important;
+      color: #718096 !important;
+      border: none !important;
+      box-shadow: none !important;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      margin-bottom: 0 !important;
+    }
+    .password-toggle-btn:hover {
+      background: transparent !important;
+      color: var(--scratch-blue) !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
     /* カスタム右クリックメニュー (全選択から除外するため user-select: none) */
     #custom-context-menu {
       display: none;
@@ -683,10 +718,10 @@
     
     <div id="loading-timeout-msg">
       <div style="font-weight:bold; color:var(--danger-color); font-size:14px; margin-bottom:4px;">
-        ⚠️ 読み込みの時間が長いです。
+        ⚠️ ロード時間が長いです。
       </div>
       <div style="font-size:12px; color:#4A5568; margin-bottom:8px;">
-        ログを確認してエラーが発生してたら主に報告してください。
+        ログを確認してエラーが出てた場合、作者に報告してください。
       </div>
       <div class="log-panel visible" id="loading-sys-log" style="height:120px; max-width:100%;"></div>
     </div>
@@ -699,7 +734,7 @@
     <!-- Step 1: ホーム画面 -->
     <div id="step-1" class="step-panel active">
       <h1>Scratch Notification</h1>
-      <p style="color:#718096;">Scratchユーザー名を入力してください</p>
+      <p style="color:#718096;">Scratchのユーザー名を入力してください</p>
       <input type="text" id="username-input" placeholder="例: Hiromu0623" maxlength="20" autocomplete="off" />
       <button id="btn-step1" onclick="checkUserSessionAndProceed()">次へ</button>
       <div id="err-step1" class="error-text"></div>
@@ -708,7 +743,7 @@
     <!-- Step 2: セキュリティ確認 -->
     <div id="step-2" class="step-panel">
       <h2>セキュリティ検証</h2>
-      <p style="font-size:14px; color:#4A5568;">チェックボックスを操作してください</p>
+      <p style="font-size:14px; color:#4A5568;">悪意の操作を防止するため、以下のチェックを完了してください。</p>
       
       <div style="display: flex; justify-content: center; margin: 20px 0;">
         <div id="turnstile-container" class="cf-turnstile" data-sitekey="0x4AAAAAAEFtAED2UAulk94o" data-callback="onTurnstileSuccess"></div>
@@ -721,7 +756,7 @@
     <div id="step-3" class="step-panel">
       <h2>アカウント所有権の確認</h2>
       <p style="font-size:14px; color:#4A5568; line-height:1.5;">
-        以下のコードをコピーし、ご自身のScratchプロフィールの<strong>「私について」</strong>欄に貼り付けて保存してください。
+        以下のコードをコピーし、ご自身のScratchプロフィールの<strong>「私について」</strong>に貼り付けて保存してください。
       </p>
 
       <div class="timer-badge">有効期限 <span id="timer-display">05:00</span></div>
@@ -739,12 +774,12 @@
       <div class="cf-box">
         <div class="loading-spinner" style="width: 36px; height: 36px; border-width: 4px; margin-bottom: 8px;"></div>
         <p style="margin:0; font-size:13px; font-weight: bold; color:#4A5568;">読み込み中...</p>
-        <p style="margin:4px 0 0 0; font-size:11px; color:#718096;">「私について」の更新を待機しています</p>
+        <p style="margin:4px 0 0 0; font-size:11px; color:#718096;">更新を待機しています</p>
       </div>
 
       <button onclick="cancelVerification()" class="btn-cancel">キャンセル</button>
       <br>
-      <span class="bypass-link" id="admin-bypass-btn" onclick="openBypassModal()">⚠️ ブロック中の方はこちら（手動パスコード認証）</span>
+      <span class="bypass-link" id="admin-bypass-btn" onclick="openBypassModal()">管理者用緊急認証</span>
       <div id="err-step3" class="error-text"></div>
     </div>
 
@@ -808,12 +843,17 @@
     <div class="log-entry info">[SYSTEM] ログモニターが起動しました。</div>
   </div>
 
-  <!-- 緊急バイパス用パスワードモーダル (伏字対応) -->
+  <!-- 緊急バイパス用パスワードモーダル (伏字 ＆ 表示切替ボタン対応) -->
   <div class="modal-overlay" id="bypass-modal">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
       <h3>🔑 管理者用緊急認証</h3>
       <p style="font-size:13px; color:#718096; margin-bottom:16px;">マスターパスコードを入力してください</p>
-      <input type="password" id="bypass-pass-input" placeholder="パスコードを入力" style="margin-bottom:12px;" />
+      
+      <div class="password-input-wrapper">
+        <input type="password" id="bypass-pass-input" placeholder="パスコードを入力" />
+        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('bypass-pass-input', this)">👁️</button>
+      </div>
+
       <div id="bypass-err-msg" class="error-text" style="margin-bottom:12px;"></div>
       <button onclick="submitBypassPass()">送信してログイン</button>
       <button onclick="closeBypassModal()" class="btn-cancel" style="margin-top:4px;">キャンセル</button>
@@ -882,11 +922,21 @@
         <div id="account-manage-list"></div>
       </div>
 
+      <!-- 緊急用マスターパスコード変更 (伏字 ＆ 表示切替ボタン対応) -->
       <div id="sub-pass" class="admin-subpanel">
         <h3>緊急用マスターパスコード変更</h3>
         <p style="font-size:12px; color:#718096;">ブロック時用の緊急バイパスパスコードを変更します。</p>
-        <input type="password" id="new-admin-pass" placeholder="新しいパスコード" />
-        <input type="password" id="confirm-admin-pass" placeholder="新しいパスコード（確認）" />
+        
+        <div class="password-input-wrapper">
+          <input type="password" id="new-admin-pass" placeholder="新しいパスコード" />
+          <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('new-admin-pass', this)">👁️</button>
+        </div>
+
+        <div class="password-input-wrapper">
+          <input type="password" id="confirm-admin-pass" placeholder="新しいパスコード（確認）" />
+          <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('confirm-admin-pass', this)">👁️</button>
+        </div>
+
         <button onclick="changeMasterPassword()" style="background-color:#6D28D9;">パスコードを更新</button>
         <div id="pass-change-msg" class="error-text"></div>
       </div>
@@ -913,6 +963,20 @@
 
     function setMasterPassword(newPass) {
       localStorage.setItem("scratch_admin_master_pass", newPass);
+    }
+
+    // --- パスワード表示/非表示切り替え関数 ---
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+
+      if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "🙈";
+      } else {
+        input.type = "password";
+        btn.textContent = "👁️";
+      }
     }
 
     // --- 1. 右クリック & F12制御 ---
@@ -1008,7 +1072,7 @@
       if (selectedText) {
         copyToClipboardNative(selectedText);
       } else {
-        showNotificationBanner("⚠️ テキストが選択されていません", "danger", 2000);
+        showNotificationBanner("テキストが選択されていません", "danger", 2000);
       }
     }
 
@@ -1554,10 +1618,10 @@
         if (successful) {
           showCopySuccess();
         } else {
-          showNotificationBanner("❌ コピーに失敗しました。手動でコピーしてください。", "danger", 3000);
+          showNotificationBanner("❌ コピーに失敗しました。", "danger", 3000);
         }
       } catch (err) {
-        showNotificationBanner("❌ コピーに失敗しました。手動でコピーしてください。", "danger", 3000);
+        showNotificationBanner("❌ コピーに失敗しました。", "danger", 3000);
       }
     }
 
@@ -2064,6 +2128,7 @@
     window.onTurnstileSuccess = onTurnstileSuccess;
     window.adminToggleBan = adminToggleBan;
     window.adminForceLogout = adminForceLogout;
+    window.togglePasswordVisibility = togglePasswordVisibility;
   </script>
 </body>
 </html>
