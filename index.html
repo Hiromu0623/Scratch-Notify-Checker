@@ -82,7 +82,7 @@
       box-shadow: none !important;
     }
 
-    /* カスタム右クリックメニュー (全選択から除外するため user-select: none) */
+    /* カスタム右クリックメニュー */
     #custom-context-menu {
       display: none;
       position: fixed;
@@ -410,7 +410,7 @@
       border-radius: 20px;
       padding: 20px 24px;
       box-sizing: border-box;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      shadow: 0 12px 30px rgba(0,0,0,0.08);
       text-align: left;
       transition: all 0.3s ease;
     }
@@ -1065,17 +1065,17 @@
       }, 50);
     }
 
+    // 【修正】右クリックコピー時に通知を表示させない処理
     function customCopy() {
       const customMenu = document.getElementById('custom-context-menu');
       if (customMenu) customMenu.style.display = 'none';
       const selectedText = window.getSelection().toString();
       if (selectedText) {
-        copyToClipboardNative(selectedText);
-      } else {
-        showNotificationBanner("テキストが選択されていません", "danger", 2000);
+        copyToClipboardNative(selectedText, false); // 第二引数で通知非表示を指定
       }
     }
 
+    // 【修正】右クリック貼り付け時に通知を表示させない処理
     async function customPaste() {
       const customMenu = document.getElementById('custom-context-menu');
       if (customMenu) customMenu.style.display = 'none';
@@ -1088,16 +1088,10 @@
             const start = activeElem.selectionStart || 0;
             const end = activeElem.selectionEnd || 0;
             activeElem.value = activeElem.value.substring(0, start) + text + activeElem.value.substring(end);
-            showNotificationBanner("📋 貼り付けました", "success", 2000);
-          } else {
-            showNotificationBanner("⚠️ 貼り付け先（入力欄）を選択してください", "info", 2000);
+            // 貼り付け成功時の通知を削除
           }
-        } else {
-          showNotificationBanner("❌ お使いのブラウザは貼り付けAPIに対応していません", "danger", 2000);
         }
-      } catch (err) {
-        showNotificationBanner("❌ クリップボードの読み取り権限が拒否されました", "danger", 2000);
-      }
+      } catch (err) {}
     }
 
     function openF12Modal() {
@@ -1591,19 +1585,20 @@
       return authCode;
     }
 
-    function copyToClipboardNative(text) {
+    // 【修正】通知制御用の引数 showBanner を追加
+    function copyToClipboardNative(text, showBanner = false) {
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(function() {
-          showCopySuccess();
+          showCopySuccess(showBanner);
         }).catch(function() {
-          fallbackCopyText(text);
+          fallbackCopyText(text, showBanner);
         });
       } else {
-        fallbackCopyText(text);
+        fallbackCopyText(text, showBanner);
       }
     }
 
-    function fallbackCopyText(text) {
+    function fallbackCopyText(text, showBanner = false) {
       try {
         const textArea = document.createElement("textarea");
         textArea.value = text;
@@ -1616,33 +1611,32 @@
         const successful = document.execCommand('copy');
         document.body.removeChild(textArea);
         if (successful) {
-          showCopySuccess();
-        } else {
-          showNotificationBanner("❌ コピーに失敗しました。", "danger", 3000);
+          showCopySuccess(showBanner);
         }
-      } catch (err) {
-        showNotificationBanner("❌ コピーに失敗しました。", "danger", 3000);
-      }
+      } catch (err) {}
     }
 
-    function showCopySuccess() {
+    // 【修正】画面中央のトースト表示を制御
+    function showCopySuccess(showBanner = false) {
       const toast = document.getElementById("copy-toast");
       if (toast) {
         toast.style.display = "block";
         setTimeout(function() { toast.style.display = "none"; }, 3000);
       }
-      showNotificationBanner("📋 コードをクリップボードにコピーしました！", "success", 3000);
+      if (showBanner) {
+        showNotificationBanner("📋 コードをクリップボードにコピーしました！", "success", 3000);
+      }
     }
 
+    // 【修正】認証コードコピー時は画面中央（#copy-toast）のみ表示させ、画面上部バナーは出さない
     function copyAuthCode() {
       const codeElem = document.getElementById("auth-code-display");
       const codeText = codeElem ? codeElem.textContent.trim() : "";
 
       if (!codeText || codeText === "------") {
-        showNotificationBanner("⚠️ コードがまだ生成されていません", "danger", 3000);
         return;
       }
-      copyToClipboardNative(codeText);
+      copyToClipboardNative(codeText, false);
     }
 
     function openScratchProfile() {
