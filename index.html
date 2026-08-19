@@ -946,6 +946,9 @@
   </div>
 
   <script>
+    // --- Electron環境の判定 ---
+    const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+
     // --- 端末固有セッショントークンの管理 ---
     function getOrCreateSessionToken() {
       let token = localStorage.getItem("scratch_session_token");
@@ -1211,19 +1214,19 @@
 
     // --- 3. Database & Firebase ---
     const firebaseConfig = {
-      apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
-      authDomain: "scratch-notify.firebaseapp.com",
-      databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
-      projectId: "scratch-notify",
-      storageBucket: "scratch-notify.firebasestorage.app",
-      messagingSenderId: "340553335348",
-      appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
-      measurementId: "G-2799DMKZTY"
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
     };
 
     let db = null;
     try {
-      if (window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+      if (window.firebase && firebaseConfig.apiKey) {
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
       }
@@ -1542,8 +1545,13 @@
         } catch (e) {}
       }
 
-      resetTurnstile();
-      showStep(2);
+      if (isElectron) {
+        log("Electron環境のためTurnstileをスキップします", "info");
+        onTurnstileSuccess("electron_bypass_token");
+      } else {
+        resetTurnstile();
+        showStep(2);
+      }
     }
 
     function resetTurnstile() {
@@ -1553,7 +1561,7 @@
     }
 
     function onTurnstileSuccess(token) {
-      if (!token || !targetUsername || currentStep !== 2) return;
+      if (!token || !targetUsername) return;
       
       generateUniqueCode();
       const codeDisplay = document.getElementById("auth-code-display");
