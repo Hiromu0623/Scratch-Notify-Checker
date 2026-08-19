@@ -1214,19 +1214,19 @@
 
     // --- 3. Database & Firebase ---
     const firebaseConfig = {
-      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-      databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-      appId: import.meta.env.VITE_FIREBASE_APP_ID,
-      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+      apiKey: "AIzaSyBh3XFlQUcOEkAIvw5YNpC5RNoP1CXmBjo",
+      authDomain: "scratch-notify.firebaseapp.com",
+      databaseURL: "https://scratch-notify-default-rtdb.firebaseio.com",
+      projectId: "scratch-notify",
+      storageBucket: "scratch-notify.firebasestorage.app",
+      messagingSenderId: "340553335348",
+      appId: "1:340553335348:web:f1e2bc659aeebaaae60061",
+      measurementId: "G-2799DMKZTY"
     };
 
     let db = null;
     try {
-      if (window.firebase && firebaseConfig.apiKey) {
+      if (window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
       }
